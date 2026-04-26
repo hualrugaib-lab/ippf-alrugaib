@@ -11,6 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <style>
 /* ═════════════════════════════════════════════════════════════════
    DESIGN TOKENS — Clean, professional palette
@@ -1452,6 +1453,576 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
   display: flex; gap: 10px; max-width: 400px; margin-top: 10px;
 }
 .date-range-inputs .field { flex: 1; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   V2 STYLES — Roles, Status, Dashboard, Users, Attachments, Clock
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Sidebar credit footer */
+.sidebar-credit {
+  margin-top: auto;
+  padding: 14px 12px 12px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.sidebar-credit-line {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+.sidebar-credit-name {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+  margin: 2px 0;
+}
+
+/* Saudi clock widget (Apple Watch-style) */
+.clock-widget {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(99,102,241,.06);
+  border: 1px solid rgba(99,102,241,.15);
+  border-radius: 10px;
+}
+.clock-svg { width: 38px; height: 38px; flex-shrink: 0; }
+.clock-svg .arc-bg { stroke: rgba(148,163,184,.15); fill: none; }
+.clock-svg .arc-h { stroke: var(--accent); fill: none; stroke-linecap: round; transition: stroke-dashoffset 0.3s; }
+.clock-svg .arc-m { stroke: var(--purple); fill: none; stroke-linecap: round; transition: stroke-dashoffset 0.3s; }
+.clock-svg .arc-s { stroke: var(--cyan); fill: none; stroke-linecap: round; transition: stroke-dashoffset 0.3s; }
+.clock-svg .clock-dot { fill: var(--text); }
+.clock-text { display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
+.clock-time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+.clock-date {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+.clock-hijri {
+  font-size: 9px;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+}
+@media (max-width: 768px) {
+  .clock-widget { display: none; }
+}
+
+/* Status badges (V2) */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.status-badge:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+.status-badge.readonly { cursor: default; }
+.status-badge.readonly:hover { transform: none; box-shadow: none; }
+.status-badge.in_progress { background: rgba(99,102,241,.12); color: var(--accent); border: 1px solid rgba(99,102,241,.25); }
+.status-badge.completed { background: rgba(34,197,94,.12); color: var(--green); border: 1px solid rgba(34,197,94,.25); }
+.status-badge.cancelled { background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.25); }
+.status-badge .status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+.status-badge.in_progress .status-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+/* Status change modal — reason field */
+.reason-textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  line-height: 1.6;
+}
+.reason-textarea:focus { outline: none; border-color: var(--accent); }
+
+/* Status pick row (in modal) */
+.status-pick-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.status-pick {
+  padding: 14px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.status-pick:hover { border-color: var(--accent); }
+.status-pick.selected { border-width: 2px; }
+.status-pick.selected.in_progress { border-color: var(--accent); background: rgba(99,102,241,.08); }
+.status-pick.selected.completed { border-color: var(--green); background: rgba(34,197,94,.08); }
+.status-pick.selected.cancelled { border-color: var(--red); background: rgba(239,68,68,.08); }
+.status-pick .pick-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+.status-pick .pick-label { font-size: 11px; font-weight: 600; }
+.status-pick .pick-en { font-size: 9px; color: var(--text-muted); margin-top: 2px; font-family: var(--font-mono); }
+
+/* Audit log entries */
+.audit-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; padding-left: 2px; }
+.audit-entry {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  align-items: flex-start;
+}
+.audit-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: rgba(99,102,241,.12);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.audit-icon.create { background: rgba(34,197,94,.12); color: var(--green); }
+.audit-icon.status { background: rgba(99,102,241,.12); color: var(--accent); }
+.audit-icon.delete { background: rgba(239,68,68,.12); color: var(--red); }
+.audit-icon.edit { background: rgba(245,158,11,.12); color: #F59E0B; }
+.audit-icon.attach { background: rgba(6,182,212,.12); color: var(--cyan); }
+.audit-icon.user { background: rgba(168,85,247,.12); color: var(--purple); }
+.audit-body { flex: 1; min-width: 0; }
+.audit-action { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.audit-target { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 4px; word-break: break-all; }
+.audit-reason {
+  font-size: 11px;
+  color: var(--text);
+  background: rgba(99,102,241,.05);
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin-top: 4px;
+  border-right: 2px solid var(--accent);
+  line-height: 1.5;
+}
+.audit-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.audit-user-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 6px;
+  background: rgba(99,102,241,.08);
+  border-radius: 4px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.audit-filter-bar {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+  padding: 10px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.audit-filter-bar select, .audit-filter-bar input {
+  flex: 1; min-width: 120px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 11px;
+  font-family: inherit;
+}
+
+/* Attachments */
+.attach-section { margin-top: 12px; }
+.attach-uploader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  background: rgba(99,102,241,.03);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.attach-uploader:hover { border-color: var(--accent); background: rgba(99,102,241,.06); }
+.attach-uploader.dragover { border-color: var(--accent); background: rgba(99,102,241,.1); }
+.attach-uploader input[type=file] { display: none; }
+.attach-uploader-icon { font-size: 22px; color: var(--accent); }
+.attach-uploader-text { flex: 1; font-size: 12px; color: var(--text); }
+.attach-uploader-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.attach-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.attach-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.attach-item-icon { font-size: 16px; flex-shrink: 0; }
+.attach-item-info { flex: 1; min-width: 0; }
+.attach-item-name { font-size: 12px; color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attach-item-meta { font-size: 10px; color: var(--text-muted); margin-top: 1px; font-family: var(--font-mono); }
+.attach-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.attach-icon-btn {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+.attach-icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+.attach-icon-btn.danger:hover { color: var(--red); border-color: var(--red); }
+.attach-progress {
+  width: 100%; height: 4px;
+  background: rgba(148,163,184,.15);
+  border-radius: 2px; overflow: hidden;
+  margin-top: 6px;
+}
+.attach-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--purple));
+  transition: width 0.2s;
+}
+
+/* Dashboard page */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.dash-kpi {
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.dash-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 3px; height: 100%;
+  background: var(--kpi-color, var(--accent));
+}
+.dash-kpi-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+.dash-kpi-value { font-size: 28px; font-weight: 700; color: var(--text); margin-top: 6px; line-height: 1; }
+.dash-kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+.dash-kpi.green { --kpi-color: var(--green); }
+.dash-kpi.red { --kpi-color: var(--red); }
+.dash-kpi.amber { --kpi-color: #F59E0B; }
+.dash-kpi.cyan { --kpi-color: var(--cyan); }
+.dash-kpi.purple { --kpi-color: var(--purple); }
+
+.dash-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+@media (max-width: 900px) { .dash-row { grid-template-columns: 1fr; } }
+.dash-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.dash-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 14px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.dash-card-title .en { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); font-weight: 400; }
+
+/* CSS donut chart */
+.donut-wrap { display: flex; align-items: center; gap: 18px; }
+.donut-svg { width: 140px; height: 140px; flex-shrink: 0; }
+.donut-bg { stroke: rgba(148,163,184,.1); fill: none; }
+.donut-segment { fill: none; transition: stroke-dasharray 0.5s; transform-origin: center; transform: rotate(-90deg); }
+.donut-center {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-family: var(--font-mono);
+  fill: var(--text);
+  font-weight: 600;
+}
+.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.donut-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.donut-label { flex: 1; color: var(--text); }
+.donut-count { font-family: var(--font-mono); color: var(--text-muted); font-weight: 600; }
+
+/* Bar chart (horizontal) */
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 10px; font-size: 11px; }
+.bar-label { width: 90px; font-size: 11px; color: var(--text-muted); flex-shrink: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.bar-track { flex: 1; height: 18px; background: rgba(148,163,184,.08); border-radius: 5px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s; }
+.bar-fill.green { background: linear-gradient(90deg, var(--green), #16A34A); }
+.bar-fill.red { background: linear-gradient(90deg, var(--red), #DC2626); }
+.bar-fill.amber { background: linear-gradient(90deg, #F59E0B, #D97706); }
+.bar-fill.accent { background: linear-gradient(90deg, var(--accent), var(--purple)); }
+.bar-value { width: 60px; text-align: left; font-family: var(--font-mono); font-size: 11px; color: var(--text); flex-shrink: 0; }
+
+/* Member performance row */
+.member-perf-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  align-items: center;
+}
+.member-perf-row:hover { background: rgba(148,163,184,.04); }
+.member-perf-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 11px;
+}
+.member-perf-info { min-width: 0; }
+.member-perf-name { font-size: 12px; color: var(--text); font-weight: 500; }
+.member-perf-meta { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+.member-perf-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Users management table */
+.users-tbl-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.users-tbl { width: 100%; border-collapse: collapse; }
+.users-tbl th {
+  background: var(--bg-input);
+  padding: 10px 12px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--border);
+}
+.users-tbl td {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.users-tbl tr:last-child td { border-bottom: none; }
+.users-tbl tr:hover { background: rgba(148,163,184,.04); }
+.user-cell-name { display: flex; align-items: center; gap: 10px; }
+.user-cell-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 12px;
+  flex-shrink: 0;
+}
+.user-cell-info { min-width: 0; }
+.user-cell-fullname { font-weight: 600; color: var(--text); }
+.user-cell-email { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 1px; }
+
+.role-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.role-badge.admin { background: rgba(168,85,247,.12); color: var(--purple); border: 1px solid rgba(168,85,247,.25); }
+.role-badge.coordinator { background: rgba(99,102,241,.12); color: var(--accent); border: 1px solid rgba(99,102,241,.25); }
+.role-badge.observer { background: rgba(148,163,184,.12); color: var(--text-muted); border: 1px solid rgba(148,163,184,.25); }
+
+.user-status-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px;
+  color: var(--green);
+}
+.user-status-pill.inactive { color: var(--text-muted); }
+.user-status-pill::before { content: '●'; font-size: 8px; }
+
+/* Invite code display */
+.invite-display {
+  text-align: center;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(168,85,247,.08));
+  border: 1px solid rgba(99,102,241,.2);
+  border-radius: 12px;
+  margin: 14px 0;
+}
+.invite-code-text {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+.invite-code-hint { font-size: 11px; color: var(--text-muted); }
+
+/* Created-By chip */
+.creator-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  background: rgba(99,102,241,.08);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* V2.1 — Prominent creator chip (in records table, next to filename) */
+.creator-chip-prominent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 4px 10px 4px 4px;
+  background: linear-gradient(135deg, rgba(99,102,241,.1), rgba(168,85,247,.08));
+  border: 1px solid rgba(99,102,241,.25);
+  border-radius: 16px;
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 500;
+  width: fit-content;
+}
+.creator-chip-prominent .creator-avatar {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.creator-chip-prominent .creator-name {
+  font-family: inherit;
+  letter-spacing: 0.01em;
+}
+
+/* V2.1 — Activity description chip */
+.activity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  background: rgba(6,182,212,.1);
+  border: 1px solid rgba(6,182,212,.25);
+  border-radius: 5px;
+  font-size: 10px;
+  color: var(--cyan);
+  font-weight: 500;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* V2.3 — Created By table cell (single distinctive color, easy to scan) */
+.creator-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  background: rgba(168,85,247,.1);
+  border: 1px solid rgba(168,85,247,.25);
+  border-radius: 16px;
+  white-space: nowrap;
+}
+.creator-cell-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--purple);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+/* V2.4 — Stack Arabic name above English transliteration */
+.creator-cell-names {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.2;
+}
+.creator-cell-name-ar {
+  font-size: 12px;
+  color: var(--purple);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.creator-cell-name-en {
+  font-size: 10px;
+  color: var(--purple);
+  font-weight: 500;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+
+/* Reason-required indicator */
+.required-mark { color: var(--red); margin-right: 2px; }
+
+/* Hide elements for non-admins (set via JS) */
+.admin-only.hidden-by-role { display: none !important; }
+.observer-disabled { opacity: 0.4; pointer-events: none; cursor: not-allowed; }
+
+/* Page-head action zone */
+.page-head-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+
+/* End V2 styles */
 </style>
 </head>
 <body>
@@ -1486,24 +2057,27 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
     <div id="login-auth-mode" style="display:none">
       <div class="login-tabs">
         <button class="login-tab active" data-auth-tab="login" onclick="switchAuthTab('login')">دخول · Login</button>
-        <button class="login-tab" data-auth-tab="signup" onclick="switchAuthTab('signup')">حساب جديد · Sign Up</button>
+        <button class="login-tab" data-auth-tab="invite" onclick="switchAuthTab('invite')">انضمام بدعوة · Join with Invite</button>
       </div>
 
       <div id="login-error" class="login-error" style="display:none"></div>
       <div id="login-success" class="login-success" style="display:none"></div>
 
       <div class="login-form">
+        <!-- Name (only when joining via invite) -->
         <div class="field" id="login-name-field" style="display:none">
-          <label><span class="ar">الاسم</span> · Name</label>
-          <input type="text" id="login-name" placeholder="اسمك الكامل">
+          <label><span class="ar">الاسم بالعربية</span> · Name (Arabic)</label>
+          <input type="text" id="login-name" placeholder="مثال: حذيفة الطالب" dir="rtl">
         </div>
-        <div class="field" id="login-role-field" style="display:none">
-          <label><span class="ar">الدور</span> · Role</label>
-          <select id="login-role">
-            <option value="manager">مدير · Manager (كل الصلاحيات)</option>
-            <option value="coordinator">منسق مشروع · Project Coordinator (إنشاء/تعديل)</option>
-            <option value="viewer">مراقب · Viewer (قراءة فقط)</option>
-          </select>
+        <div class="field" id="login-name-en-field" style="display:none">
+          <label><span class="ar">الاسم بالإنجليزية</span> · Name (English)</label>
+          <input type="text" id="login-name-en" placeholder="e.g. Huzaifa Altaleb" style="direction:ltr">
+        </div>
+        <!-- Invite code (only when joining via invite) -->
+        <div class="field" id="login-invite-field" style="display:none">
+          <label><span class="ar">رمز الدعوة</span> · Invite Code</label>
+          <input type="text" id="login-invite" placeholder="مثال: IPPF-A1B2-C3D4" style="font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.05em">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px">احصل على الرمز من المسؤول (Admin)</div>
         </div>
         <div class="field">
           <label><span class="ar">البريد الإلكتروني</span> · Email</label>
@@ -1519,6 +2093,9 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
         </div>
         <div class="login-divider"><span>أو · OR</span></div>
         <button class="login-btn" style="background:rgba(148,163,184,.1);color:var(--text-muted);border:1px solid var(--border)" onclick="useLocalMode()">⟶ متابعة بدون حساب (محلي) · Skip — Local Mode</button>
+        <div style="margin-top:14px;padding:10px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:8px;font-size:10px;line-height:1.7;color:var(--text-muted)">
+          <strong style="color:var(--accent)">ℹ️ للمسؤول:</strong> أول حساب يُنشأ يصبح Admin تلقائياً. ولإضافة أعضاء جدد، استخدم لوحة "إدارة المستخدمين" داخل النظام لتوليد رمز دعوة.
+        </div>
       </div>
     </div>
 
@@ -1574,6 +2151,32 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
       </div>
     </div>
     <div class="header-pills">
+      <!-- Saudi Clock Widget (Apple Watch-style) -->
+      <div class="clock-widget" id="clock-widget" title="التوقيت السعودي">
+        <svg class="clock-svg" viewBox="0 0 40 40">
+          <!-- Hours arc (outer) -->
+          <circle class="arc-bg" cx="20" cy="20" r="17" stroke-width="2"/>
+          <circle class="arc-h" cx="20" cy="20" r="17" stroke-width="2"
+            stroke-dasharray="106.8" stroke-dashoffset="106.8"
+            transform="rotate(-90 20 20)"/>
+          <!-- Minutes arc (middle) -->
+          <circle class="arc-bg" cx="20" cy="20" r="13" stroke-width="2"/>
+          <circle class="arc-m" cx="20" cy="20" r="13" stroke-width="2"
+            stroke-dasharray="81.7" stroke-dashoffset="81.7"
+            transform="rotate(-90 20 20)"/>
+          <!-- Seconds arc (inner) -->
+          <circle class="arc-bg" cx="20" cy="20" r="9" stroke-width="2"/>
+          <circle class="arc-s" cx="20" cy="20" r="9" stroke-width="2"
+            stroke-dasharray="56.5" stroke-dashoffset="56.5"
+            transform="rotate(-90 20 20)"/>
+          <circle class="clock-dot" cx="20" cy="20" r="1.5"/>
+        </svg>
+        <div class="clock-text">
+          <div class="clock-time" id="clock-time">--:--:--</div>
+          <div class="clock-date" id="clock-greg">— — —</div>
+          <div class="clock-hijri" id="clock-hijri">—</div>
+        </div>
+      </div>
       <div class="sync-pill offline" id="sync-indicator">
         <span class="dot"></span>
         <span id="sync-text">محلي · Local</span>
@@ -1590,6 +2193,7 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
             <div class="user-dropdown-email" id="user-dd-email">— Local Mode —</div>
             <div class="user-dropdown-role" id="user-dd-role">LOCAL</div>
           </div>
+          <button class="user-dropdown-item" onclick="openProfileModal();closeUserMenu()">👤 ملفي الشخصي · My Profile</button>
           <button class="user-dropdown-item" onclick="switchTab('settings');closeUserMenu()">⚙ الإعدادات · Settings</button>
           <button class="user-dropdown-item danger" onclick="signOut()">⏏ تسجيل الخروج · Sign Out</button>
         </div>
@@ -1610,6 +2214,10 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
         <span>سجل الوثائق</span>
         <span class="nav-badge" id="nav-badge">0</span>
       </button>
+      <button class="nav-item" data-tab="dashboard" id="nav-dashboard">
+        <span class="nav-icon">▦</span>
+        <span>لوحة التحكم</span>
+      </button>
       <button class="nav-item" data-tab="projects">
         <span class="nav-icon">◐</span>
         <span>المشاريع</span>
@@ -1622,10 +2230,23 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Manage · إدارة</div>
+      <button class="nav-item" data-tab="users" id="nav-users" style="display:none">
+        <span class="nav-icon">⚇</span>
+        <span>إدارة المستخدمين</span>
+      </button>
+      <button class="nav-item" data-tab="audit" id="nav-audit" style="display:none">
+        <span class="nav-icon">⏱</span>
+        <span>سجل التدقيق</span>
+      </button>
       <button class="nav-item" data-tab="settings">
         <span class="nav-icon">◈</span>
         <span>الإعدادات</span>
       </button>
+    </div>
+    <!-- Sidebar credit footer -->
+    <div class="sidebar-credit">
+      <div class="sidebar-credit-name">حذيفة الطالب</div>
+      <div class="sidebar-credit-line" style="font-family:var(--font-mono);letter-spacing:0.04em">Huzaifa Altaleb</div>
     </div>
   </aside>
 
@@ -1690,6 +2311,13 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
           <div class="field">
             <label><span class="ar">نوع الوثيقة</span> · Document Type</label>
             <div class="combo" id="c-doctype"></div>
+          </div>
+          <div class="field">
+            <label>
+              <span class="ar">وصف النشاط</span> · Activity Description
+              <span style="font-size:10px;color:var(--text-dim);margin-inline-start:4px;font-weight:400">— اختياري · Optional</span>
+            </label>
+            <div class="combo" id="c-activity"></div>
           </div>
         </div>
       </div>
@@ -1886,6 +2514,10 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
             <label><span class="ar">نوع الوثيقة</span> · Type</label>
             <select id="f-type" onchange="renderRecords()"><option value="">الكل · All</option></select>
           </div>
+          <div class="field">
+            <label><span class="ar">أنشأ بواسطة</span> · Created By</label>
+            <select id="f-creator" onchange="renderRecords()"><option value="">الكل · All</option></select>
+          </div>
           <button class="btn btn-ghost" onclick="clearFilters()">↺ مسح</button>
         </div>
       </div>
@@ -2009,6 +2641,20 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
         </div>
       </div>
 
+      <!-- V2.2 — Activities management -->
+      <div class="setting-block">
+        <div class="setting-title">⚙ <span class="ar">أوصاف الأنشطة</span> · Activity Descriptions</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.6">
+          الأنشطة المخصصة التي تُضاف هنا ستظهر في قائمة "وصف النشاط" عند إنشاء وثيقة جديدة، إلى جانب الـ 91 نشاطاً المدمج.
+        </div>
+        <div class="tag-list" id="set-activities"></div>
+        <div class="add-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:10px">
+          <input type="text" id="new-activity-ar" placeholder="الوصف بالعربية · Arabic" dir="rtl">
+          <input type="text" id="new-activity-en" placeholder="Description in English" style="direction:ltr">
+          <button class="btn btn-primary" onclick="addActivity()">+ إضافة</button>
+        </div>
+      </div>
+
       <!-- SLA Rules Settings -->
       <div class="setting-block">
         <div class="setting-title">⏱ <span class="ar">قواعد المهلة الزمنية بين المراحل</span> · SLA Rules Per Stage</div>
@@ -2033,8 +2679,8 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
         </div>
       </div>
 
-      <div class="setting-block" style="border-color:rgba(239,68,68,.2)">
-        <div class="setting-title" style="color:var(--red)">⚠️ <span class="ar">منطقة الخطر</span> · Danger Zone</div>
+      <div class="setting-block admin-only" id="settings-danger-block" style="border-color:rgba(239,68,68,.2)">
+        <div class="setting-title" style="color:var(--red)">⚠️ <span class="ar">منطقة الخطر</span> · Danger Zone <span style="font-size:10px;color:var(--text-muted);font-weight:400;margin-right:8px">— Admin only</span></div>
         <div class="btn-row">
           <button class="btn btn-danger" onclick="clearRecords()">🗑 حذف جميع السجلات</button>
           <button class="btn btn-danger" onclick="resetAll()">↺ إعادة تعيين كامل</button>
@@ -2042,7 +2688,314 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
       </div>
     </section>
 
+    <!-- ════════════════════════════════════════════════════════════
+         V2 PAGE: Dashboard
+         ════════════════════════════════════════════════════════════ -->
+    <section class="page" id="page-dashboard">
+      <div class="page-head">
+        <div>
+          <div class="page-title">لوحة التحكم <span class="en">Dashboard</span></div>
+          <div class="page-sub">إحصائيات الإنجاز والتأخير ونسب الحالات في الوقت الفعلي</div>
+        </div>
+      </div>
+
+      <!-- KPI Tiles -->
+      <div class="dash-grid" id="dash-kpis"></div>
+
+      <!-- Status Donut + Performance Bars -->
+      <div class="dash-row">
+        <div class="dash-card">
+          <div class="dash-card-title">
+            <span>توزيع الحالات</span>
+            <span class="en">Status Distribution</span>
+          </div>
+          <div id="dash-donut"></div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">
+            <span>الأداء حسب المرحلة</span>
+            <span class="en">Stage Performance</span>
+          </div>
+          <div id="dash-stage-bars"></div>
+        </div>
+      </div>
+
+      <!-- Member Performance + Recent Activity -->
+      <div class="dash-row">
+        <div class="dash-card">
+          <div class="dash-card-title">
+            <span>أداء الأعضاء</span>
+            <span class="en">Members Activity</span>
+          </div>
+          <div id="dash-members"></div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">
+            <span>توزيع المشاريع</span>
+            <span class="en">By Project</span>
+          </div>
+          <div id="dash-by-project"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════
+         V2 PAGE: Users Management (Admin only)
+         ════════════════════════════════════════════════════════════ -->
+    <section class="page" id="page-users">
+      <div class="page-head">
+        <div>
+          <div class="page-title">إدارة المستخدمين <span class="en">Users Management</span></div>
+          <div class="page-sub">إضافة الأعضاء وتعيين الصلاحيات وتوليد رموز الدعوة</div>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-primary" onclick="openCreateUserModal()">+ إضافة عضو · Add Member</button>
+          <button class="btn btn-ghost" onclick="generateInviteCode()">🎟 توليد رمز دعوة · Generate Invite</button>
+        </div>
+      </div>
+
+      <div class="users-tbl-wrap" id="users-tbl-wrap">
+        <div class="empty">
+          <div class="empty-icon">⚇</div>
+          <div class="empty-text">لا توجد بيانات · Loading users...</div>
+        </div>
+      </div>
+
+      <!-- Active invite codes -->
+      <div class="dash-card" style="margin-top:18px">
+        <div class="dash-card-title">
+          <span>رموز الدعوة النشطة</span>
+          <span class="en">Active Invite Codes</span>
+        </div>
+        <div id="active-invites">
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;padding:12px">لا توجد رموز نشطة</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════
+         V2 PAGE: Audit Log
+         ════════════════════════════════════════════════════════════ -->
+    <section class="page" id="page-audit">
+      <div class="page-head">
+        <div>
+          <div class="page-title">سجل التدقيق <span class="en">Audit Log</span></div>
+          <div class="page-sub">سجل كامل لجميع التغييرات: من غيّر، ماذا غيّر، ولماذا</div>
+        </div>
+      </div>
+
+      <div class="audit-filter-bar">
+        <select id="audit-filter-action">
+          <option value="">كل الإجراءات · All actions</option>
+          <option value="create">إنشاء · Create</option>
+          <option value="status_change">تغيير حالة · Status change</option>
+          <option value="edit">تعديل · Edit</option>
+          <option value="delete">حذف · Delete</option>
+          <option value="attach">مرفق · Attachment</option>
+          <option value="user">مستخدم · User</option>
+        </select>
+        <select id="audit-filter-user">
+          <option value="">كل المستخدمين · All users</option>
+        </select>
+        <input type="text" id="audit-filter-search" placeholder="بحث في السجل · Search...">
+        <button class="btn btn-ghost btn-sm" onclick="renderAuditLog()">↻ تحديث</button>
+      </div>
+
+      <div class="audit-list" id="audit-list">
+        <div class="empty">
+          <div class="empty-icon">⏱</div>
+          <div class="empty-text">جاري التحميل · Loading audit log...</div>
+        </div>
+      </div>
+    </section>
+
   </main>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     V2 MODALS — Status Change · Audit · Attachments · Invite · Create User
+     ════════════════════════════════════════════════════════════════ -->
+
+<!-- Status Change Modal -->
+<div class="modal" id="status-modal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title">⚙ <span>تغيير حالة الوثيقة · Change Status</span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;padding:8px 10px;background:var(--bg-input);border-radius:6px">
+      <span id="status-modal-record-name" style="font-family:var(--font-mono);color:var(--text);font-weight:600">—</span>
+    </div>
+
+    <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;display:block">الحالة الجديدة · New Status</label>
+    <div class="status-pick-row">
+      <div class="status-pick" data-status="in_progress" onclick="pickStatus('in_progress')">
+        <span class="pick-icon">⚙</span>
+        <div class="pick-label">تحت التنفيذ</div>
+        <div class="pick-en">In Progress</div>
+      </div>
+      <div class="status-pick" data-status="completed" onclick="pickStatus('completed')">
+        <span class="pick-icon">✓</span>
+        <div class="pick-label">تم الإنجاز</div>
+        <div class="pick-en">Completed</div>
+      </div>
+      <div class="status-pick" data-status="cancelled" onclick="pickStatus('cancelled')">
+        <span class="pick-icon">✕</span>
+        <div class="pick-label">تم الإلغاء</div>
+        <div class="pick-en">Cancelled</div>
+      </div>
+    </div>
+
+    <div class="modal-field full" style="margin-top:14px">
+      <label><span class="ar">سبب التغيير</span> · Reason for Change <span class="required-mark">*</span></label>
+      <textarea class="reason-textarea" id="status-reason" placeholder="اكتب سبباً واضحاً لتغيير الحالة (سيُسجَّل في سجل التدقيق)..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeStatusModal()">إلغاء · Cancel</button>
+      <button class="btn btn-primary" id="status-save-btn" onclick="saveStatusChange()">حفظ · Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Attachments Modal -->
+<div class="modal" id="attach-modal">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-title">📎 <span>المرفقات · Attachments</span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;padding:8px 10px;background:var(--bg-input);border-radius:6px">
+      <span id="attach-modal-record-name" style="font-family:var(--font-mono);color:var(--text);font-weight:600">—</span>
+    </div>
+
+    <label class="attach-uploader" id="attach-uploader-zone">
+      <input type="file" id="attach-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip,.rar">
+      <div class="attach-uploader-icon">⬆</div>
+      <div>
+        <div class="attach-uploader-text">اضغط أو اسحب ملفات للرفع</div>
+        <div class="attach-uploader-sub">PDF, DOC, XLS, صور — حد أقصى 10 MB لكل ملف</div>
+      </div>
+    </label>
+
+    <div class="attach-list" id="attach-list-display"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAttachModal()">إغلاق · Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invite Code Display Modal -->
+<div class="modal" id="invite-modal">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-title">🎟 <span>رمز دعوة جديد · New Invite Code</span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">شارك هذا الرمز مع العضو الجديد. ينتهي خلال 7 أيام أو بعد الاستخدام مرة واحدة.</div>
+
+    <div class="modal-field full">
+      <label><span class="ar">الصلاحية المعينة</span> · Assigned Role</label>
+      <select id="invite-role-select">
+        <option value="coordinator">منسق مشروع · Project Coordinator</option>
+        <option value="observer">مراقب إداري · Executive Observer</option>
+        <option value="admin">مسؤول · Admin</option>
+      </select>
+    </div>
+
+    <div class="invite-display">
+      <div class="invite-code-text" id="invite-code-display">—</div>
+      <div class="invite-code-hint">انسخ الرمز وأرسله للعضو الجديد</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeInviteModal()">إغلاق · Close</button>
+      <button class="btn btn-primary" onclick="copyInviteCode()">⎘ نسخ · Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- V2.4 — My Profile Modal (works in cloud AND local mode) -->
+<div class="modal" id="profile-modal">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-title">👤 <span>ملفي الشخصي · My Profile</span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">سيظهر اسمك (عربي + إنجليزي) في عمود "أنشأ بواسطة" بجانب كل وثيقة تنشئها.</div>
+
+    <div id="pf-local-hint" style="display:none;padding:10px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:11px;color:#F59E0B;margin-bottom:14px;line-height:1.6">
+      ⓘ أنت في <strong>الوضع المحلي</strong>. اسمك سيُحفظ على هذا الجهاز فقط.
+    </div>
+
+    <div class="modal-grid">
+      <div class="modal-field full">
+        <label><span class="ar">الاسم بالعربية</span> · Name (Arabic) <span class="required-mark">*</span></label>
+        <input type="text" id="pf-name" placeholder="مثال: حذيفة الطالب" dir="rtl">
+      </div>
+      <div class="modal-field full">
+        <label><span class="ar">الاسم بالإنجليزية</span> · Name (English)</label>
+        <input type="text" id="pf-name-en" placeholder="e.g. Huzaifa Altaleb" style="direction:ltr">
+      </div>
+      <div class="modal-field full" id="pf-cloud-fields">
+        <label><span class="ar">البريد الإلكتروني</span> · Email</label>
+        <input type="email" id="pf-email" disabled style="opacity:.6">
+      </div>
+      <div class="modal-field full" id="pf-cloud-role-field">
+        <label><span class="ar">الصلاحية</span> · Role</label>
+        <input type="text" id="pf-role" disabled style="opacity:.6;text-transform:uppercase;letter-spacing:0.05em">
+      </div>
+    </div>
+
+    <!-- V2.5 — Apply this name to existing legacy records -->
+    <div style="margin-top:14px;padding:12px;background:rgba(99,102,241,.05);border:1px solid rgba(99,102,241,.2);border-radius:8px">
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:var(--text);line-height:1.6">
+        <input type="checkbox" id="pf-apply-old" style="margin-top:3px;cursor:pointer">
+        <span>
+          <strong>تطبيق هذا الاسم على السجلات القديمة</strong><br>
+          <span style="font-size:10px;color:var(--text-muted)">سيُستبدل "محلي" و "النظام (V1)" باسمك في عمود "أنشأ بواسطة" لكل الوثائق الموجودة.</span>
+        </span>
+      </label>
+    </div>
+
+    <div id="pf-error" style="display:none;padding:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:var(--red);font-size:11px;margin-top:10px"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeProfileModal()">إلغاء · Cancel</button>
+      <button class="btn btn-primary" id="pf-save-btn" onclick="saveProfile()">حفظ · Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal" id="create-user-modal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title">➕ <span>إضافة عضو جديد · Add Member</span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">سيتم إنشاء حساب وإرسال بياناته للعضو. يمكنه تسجيل الدخول مباشرة.</div>
+
+    <div class="modal-grid">
+      <div class="modal-field full">
+        <label><span class="ar">الاسم بالعربية</span> · Name (Arabic) <span class="required-mark">*</span></label>
+        <input type="text" id="cu-name" placeholder="مثال: أحمد محمد العلي" dir="rtl">
+      </div>
+      <div class="modal-field full">
+        <label><span class="ar">الاسم بالإنجليزية</span> · Name (English)</label>
+        <input type="text" id="cu-name-en" placeholder="e.g. Ahmad Mohammed Alali" style="direction:ltr">
+      </div>
+      <div class="modal-field full">
+        <label><span class="ar">البريد الإلكتروني</span> · Email <span class="required-mark">*</span></label>
+        <input type="email" id="cu-email" placeholder="user@example.com">
+      </div>
+      <div class="modal-field">
+        <label><span class="ar">كلمة المرور المؤقتة</span> · Password <span class="required-mark">*</span></label>
+        <input type="text" id="cu-password" placeholder="6 أحرف على الأقل" style="font-family:var(--font-mono)">
+      </div>
+      <div class="modal-field">
+        <label><span class="ar">الصلاحية</span> · Role</label>
+        <select id="cu-role">
+          <option value="coordinator">منسق مشروع · Coordinator</option>
+          <option value="observer">مراقب إداري · Observer</option>
+          <option value="admin">مسؤول · Admin</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="cu-error" style="display:none;padding:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:var(--red);font-size:11px;margin-top:10px"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeCreateUserModal()">إلغاء · Cancel</button>
+      <button class="btn btn-primary" id="cu-save-btn" onclick="saveNewUser()">إنشاء الحساب · Create Account</button>
+    </div>
+  </div>
 </div>
 
 <!-- Mobile nav -->
@@ -2135,6 +3088,10 @@ tbody td { padding: 11px 12px; vertical-align: middle; }
       <div class="modal-field full">
         <label><span class="ar">نوع الوثيقة</span> · Document Type</label>
         <select id="rm-doc"></select>
+      </div>
+      <div class="modal-field full">
+        <label><span class="ar">وصف النشاط</span> · Activity Description <span style="font-size:10px;color:var(--text-dim);font-weight:400">— اختياري</span></label>
+        <select id="rm-activity"></select>
       </div>
 
       <!-- Financial section (conditional) -->
@@ -2322,11 +3279,22 @@ function updateUserPill() {
     ddRole.textContent = role;
     setSyncStatus('synced', 'متصل · Synced');
   } else {
-    avatar.textContent = 'L';
-    nameShort.textContent = 'Local';
-    ddName.textContent = 'Local User';
-    ddEmail.textContent = '— Local Mode —';
-    ddRole.textContent = 'LOCAL';
+    // V2.5 — Show localUser name in pill if set via Profile modal
+    const lu = (typeof state !== 'undefined' && state.localUser) ? state.localUser : null;
+    if (lu && lu.name) {
+      const full = lu.nameEn ? `${lu.name} ${lu.nameEn}` : lu.name;
+      avatar.textContent = lu.name.charAt(0);
+      nameShort.textContent = (lu.nameEn ? lu.nameEn.split(' ')[0] : lu.name.split(' ')[0]);
+      ddName.textContent = full;
+      ddEmail.textContent = '— Local Mode —';
+      ddRole.textContent = 'LOCAL';
+    } else {
+      avatar.textContent = 'L';
+      nameShort.textContent = 'Local';
+      ddName.textContent = 'Local User';
+      ddEmail.textContent = '— Local Mode —';
+      ddRole.textContent = 'LOCAL';
+    }
     setSyncStatus('offline', 'محلي · Local');
   }
 }
@@ -2772,14 +3740,14 @@ const DEFAULT_DOCTYPES = [
 ];
 
 // Default SLA durations for each chain step (working days)
-// Editable from settings
+// Editable from settings — V2 spec: PR/PO=3, Payment=2
 const DEFAULT_SLA_RULES = {
-  quotation_to_pr: 3,      // عرض سعر → PR
-  pr_to_po: 2,             // PR → PO
+  quotation_to_pr: 3,      // عرض سعر → PR (3 working days)
+  pr_to_po: 3,             // PR → PO (3 working days)
   po_to_contract: 5,       // PO → عقد
   contract_to_minutes: 30, // عقد → محضر استلام
-  invoice_to_paid: 2,      // مستخلص → سداد
-  default: 2,              // أي وثيقة بدون قاعدة
+  invoice_to_paid: 2,      // مستخلص → سداد (2 working days)
+  default: 3,              // أي وثيقة بدون قاعدة
 };
 
 const STATE_KEY = 'ippf_v1';
@@ -2790,6 +3758,7 @@ let state = {
   records: [],
   mode: 'invoice',
   slaRules: { ...DEFAULT_SLA_RULES },
+  localUser: { name: '', nameEn: '' },  // V2.5 — local mode profile
 };
 
 function loadState() {
@@ -2825,6 +3794,10 @@ function loadState() {
         records: parsed.records || [],
         mode: parsed.mode || 'invoice',
         slaRules: { ...DEFAULT_SLA_RULES, ...(parsed.slaRules || {}) },
+        // V2 fields — must be preserved across reloads
+        localUser: parsed.localUser || { name: '', nameEn: '' },     // V2.5
+        customActivities: parsed.customActivities || [],              // V2.2
+        auditLog: parsed.auditLog || [],                              // V2 audit
       };
 
       // MIGRATION: Update old records to use new doctype names
@@ -2844,6 +3817,9 @@ function loadState() {
         records: [],
         mode: 'invoice',
         slaRules: { ...DEFAULT_SLA_RULES },
+        localUser: { name: '', nameEn: '' },
+        customActivities: [],
+        auditLog: [],
       };
     }
   } catch (e) {
@@ -2855,6 +3831,9 @@ function loadState() {
       records:[],
       mode:'invoice',
       slaRules: { ...DEFAULT_SLA_RULES },
+      localUser: { name: '', nameEn: '' },
+      customActivities: [],
+      auditLog: [],
     };
   }
 }
@@ -2871,7 +3850,7 @@ const AR_MAP = {
   'ح':'h','خ':'kh','د':'d','ذ':'dh','ر':'r','ز':'z','س':'s','ش':'sh',
   'ص':'s','ض':'d','ط':'t','ظ':'z','ع':'a','غ':'gh','ف':'f','ق':'q',
   'ك':'k','ل':'l','م':'m','ن':'n','ه':'h','و':'w','ي':'y','ى':'a',
-  'ة':'h','ء':'','ئ':'y','ؤ':'w',' ':'',
+  'ة':'h','ء':'','ئ':'y','ؤ':'w',' ':' ',
   'لا':'la','لأ':'la','لإ':'li','لآ':'laa',
 };
 const DICT = {
@@ -2906,7 +3885,16 @@ function translit(txt) {
     else if (/[a-zA-Z0-9]/.test(ch)) out += ch;
     else if (ch === ' ') out += ' ';
   }
-  return out.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+  // V2.2 — Preserve spaces & capitalize each word for readability
+  // (e.g. "abdul latif general contracting" → "Abdul Latif General Contracting")
+  return out
+    .replace(/[^a-zA-Z0-9 ]/g, '')      // strip stray punctuation, KEEP spaces
+    .replace(/\s+/g, ' ')                // collapse multiple spaces
+    .trim()
+    .split(' ')
+    .map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '')
+    .filter(Boolean)
+    .join(' ');
 }
 
 function docChainKey(doc) {
@@ -3223,6 +4211,101 @@ document.addEventListener('mousedown', (e) => {
    INIT COMBOBOXES
    ═══════════════════════════════════════════════════════════════ */
 let cbProject, cbContractor, cbDoctype;
+let cbActivity; // V2.1 — Activity description combobox
+
+// V2.1 — Activity Descriptions (from وصف_النشاط.xlsx)
+const ACTIVITIES = [
+  { en: 'Landscaping Works', ar: 'أعمال تنسيق المواقع' },
+  { en: 'Planting Works', ar: 'أعمال الزراعة' },
+  { en: 'Site Beautification Works', ar: 'أعمال التجميل والتحسين للمواقع' },
+  { en: 'General Maintenance Works', ar: 'أعمال الصيانة العامة' },
+  { en: 'Building Maintenance Works', ar: 'أعمال صيانة المباني' },
+  { en: 'Facility Maintenance Works', ar: 'أعمال صيانة المرافق' },
+  { en: 'Engineering Supervision Works', ar: 'أعمال الإشراف الهندسي' },
+  { en: 'Project Supervision Works', ar: 'أعمال الإشراف على المشاريع' },
+  { en: 'Engineering Design Works', ar: 'أعمال التصميم الهندسي' },
+  { en: 'Electrical Maintenance Works', ar: 'أعمال الصيانة الكهربائية' },
+  { en: 'Mechanical Maintenance Works', ar: 'أعمال الصيانة الميكانيكية' },
+  { en: 'Plumbing Maintenance Works', ar: 'أعمال صيانة السباكة' },
+  { en: 'Plumbing Works', ar: 'أعمال السباكة' },
+  { en: 'Sanitary Works', ar: 'أعمال الصرف الصحي' },
+  { en: 'HVAC Maintenance Works', ar: 'أعمال صيانة التكييف' },
+  { en: 'Air Conditioning Works', ar: 'أعمال التكييف' },
+  { en: 'Cooling Systems Maintenance Works', ar: 'أعمال صيانة أنظمة التبريد' },
+  { en: 'Excavation Works', ar: 'أعمال الحفر' },
+  { en: 'Backfilling Works', ar: 'أعمال الردم' },
+  { en: 'Land Leveling Works', ar: 'أعمال تسوية الأراضي' },
+  { en: 'Land Preparation Works', ar: 'أعمال تجهيز الأراضي' },
+  { en: 'Land Development Works', ar: 'أعمال تطوير الأراضي' },
+  { en: 'Concrete Works', ar: 'الأعمال الخرسانية' },
+  { en: 'Construction Works', ar: 'أعمال الإنشاءات' },
+  { en: 'Building Works', ar: 'أعمال المباني' },
+  { en: 'Interior Finishing Works', ar: 'أعمال التشطيبات الداخلية' },
+  { en: 'Exterior Finishing Works', ar: 'أعمال التشطيبات الخارجية' },
+  { en: 'Finishing Works', ar: 'أعمال التشطيبات' },
+  { en: 'Road Works', ar: 'أعمال الطرق' },
+  { en: 'Asphalt Works', ar: 'أعمال الأسفلت' },
+  { en: 'Sidewalk Works', ar: 'أعمال الأرصفة' },
+  { en: 'Water Network Works', ar: 'أعمال شبكات المياه' },
+  { en: 'Sewerage Network Works', ar: 'أعمال شبكات الصرف الصحي' },
+  { en: 'Electrical Network Works', ar: 'أعمال الشبكات الكهربائية' },
+  { en: 'Lighting Works', ar: 'أعمال الإنارة' },
+  { en: 'Communication Network Works', ar: 'أعمال شبكات الاتصالات' },
+  { en: 'Information Technology Network Works', ar: 'أعمال شبكات تقنية المعلومات' },
+  { en: 'Security Systems Works', ar: 'أعمال الأنظمة الأمنية' },
+  { en: 'Safety Systems Works', ar: 'أعمال أنظمة السلامة' },
+  { en: 'Fire Fighting Systems Works', ar: 'أعمال أنظمة مكافحة الحريق' },
+  { en: 'Waterproofing Works', ar: 'أعمال العزل المائي' },
+  { en: 'Thermal Insulation Works', ar: 'أعمال العزل الحراري' },
+  { en: 'Facade Works', ar: 'أعمال الواجهات' },
+  { en: 'Glass Works', ar: 'أعمال الزجاج' },
+  { en: 'Aluminum Works', ar: 'أعمال الألمنيوم' },
+  { en: 'Fence Works', ar: 'أعمال الأسوار' },
+  { en: 'Gate Works', ar: 'أعمال البوابات' },
+  { en: 'Canopy Works', ar: 'أعمال المظلات' },
+  { en: 'Elevator Works', ar: 'أعمال المصاعد' },
+  { en: 'Escalator Works', ar: 'أعمال السلالم الكهربائية' },
+  { en: 'Facility Management Works', ar: 'أعمال إدارة المرافق' },
+  { en: 'Facility Operation Works', ar: 'أعمال تشغيل المرافق' },
+  { en: 'Cleaning Works', ar: 'أعمال النظافة' },
+  { en: 'Support Services Works', ar: 'أعمال الخدمات المساندة' },
+  { en: 'Renovation Works', ar: 'أعمال الترميم' },
+  { en: 'Rehabilitation Works', ar: 'أعمال إعادة التأهيل' },
+  { en: 'Project Inspection Works', ar: 'أعمال فحص المشاريع' },
+  { en: 'Project Handover Works', ar: 'أعمال تسليم المشاريع' },
+  { en: 'Surveying Works', ar: 'أعمال الرفع المساحي' },
+  { en: 'Engineering Drawings Preparation', ar: 'أعمال إعداد المخططات الهندسية' },
+  { en: 'License Issuance Works', ar: 'أعمال إصدار التراخيص' },
+  { en: 'Permit Issuance Works', ar: 'أعمال إصدار التصاريح' },
+  { en: 'Technical Studies Preparation', ar: 'أعمال إعداد الدراسات الفنية' },
+  { en: 'Feasibility Studies Preparation', ar: 'أعمال إعداد دراسات الجدوى' },
+  { en: 'Contract Management Works', ar: 'أعمال إدارة العقود' },
+  { en: 'Progress Payment Works', ar: 'أعمال المستخلصات' },
+  { en: 'Procurement Works', ar: 'أعمال المشتريات' },
+  { en: 'Purchase Request Works', ar: 'أعمال طلبات الشراء' },
+  { en: 'Invoice Follow-up Works', ar: 'أعمال متابعة الفواتير' },
+  { en: 'Financial Claim Follow-up Works', ar: 'أعمال متابعة المطالبات المالية' },
+  { en: 'Technical Archiving Works', ar: 'أعمال الأرشفة الفنية' },
+  { en: 'Document Management Works', ar: 'أعمال إدارة الوثائق' },
+  { en: 'Drawing Management Works', ar: 'أعمال إدارة المخططات' },
+  { en: 'Real Estate Asset Management', ar: 'أعمال إدارة الأصول العقارية' },
+  { en: 'Engineering Compliance Works', ar: 'أعمال الامتثال الهندسي' },
+  { en: 'Regulatory Control Works', ar: 'أعمال الرقابة التنظيمية' },
+  { en: 'Government Coordination Works', ar: 'أعمال التنسيق الحكومي' },
+  { en: 'Utility Coordination Works', ar: 'أعمال التنسيق مع الجهات الخدمية' },
+  { en: 'Project Management Works', ar: 'أعمال إدارة المشاريع' },
+  { en: 'Project Execution Follow-up', ar: 'أعمال متابعة تنفيذ المشاريع' },
+  { en: 'Quality Control Works', ar: 'أعمال ضبط الجودة' },
+  { en: 'Quality Assurance Works', ar: 'أعمال ضمان الجودة' },
+  { en: 'Engineering Consultancy Works', ar: 'أعمال الاستشارات الهندسية' },
+  { en: 'Technical Consultancy Works', ar: 'أعمال الاستشارات الفنية' },
+  { en: 'Post-Handover Operation Works', ar: 'أعمال التشغيل بعد التسليم' },
+  { en: 'Preventive Maintenance Works', ar: 'أعمال الصيانة الوقائية' },
+  { en: 'Periodic Maintenance Works', ar: 'أعمال الصيانة الدورية' },
+  { en: 'Emergency Maintenance Works', ar: 'أعمال الصيانة الطارئة' },
+  { en: 'Government Fees', ar: 'الرسوم الحكومية' },
+  { en: 'Official Charges', ar: 'الرسوم الرسمية' },
+];
 
 function initCombos() {
   cbProject = new Combobox('c-project', {
@@ -3260,6 +4343,19 @@ function initCombos() {
     onChange: () => buildName()
   });
   document.getElementById('c-doctype')._comboInstance = cbDoctype;
+
+  // V2.1 — Activity Description combobox
+  cbActivity = new Combobox('c-activity', {
+    placeholder: 'وصف النشاط · Activity (optional)',
+    getItems: () => getAllActivities().map(a => ({
+      value: a.en,
+      label: a.ar,
+      sub: '→ ' + a.en,
+      icon: '⚙'
+    })),
+    onChange: () => buildName()
+  });
+  document.getElementById('c-activity')._comboInstance = cbActivity;
 }
 
 /* ═════════════════════════════════════════════════════════════════
@@ -3316,8 +4412,15 @@ function buildName() {
   const contEn = DICT[cont] || translit(cont) || 'Contractor';
   const docEn = DICT[doc] || translit(doc) || 'Document';
 
-  const parts = [projCode, contEn, docEn, suffix].filter(Boolean);
-  currentName = parts.join(' ');
+  // V2.2 — Activity description with spaces preserved (e.g., "Finishing Works")
+  const activity = cbActivity?.value || '';
+  const activityToken = activity.trim();
+
+  // V2.2 — Use " - " (space-dash-space) as separator for readability
+  // Compound names like "Abdul Latif Saleh Hammadi Basfar General Contracting"
+  // remain readable thanks to the dash boundary between parts.
+  const parts = [projCode, contEn, docEn, suffix, activityToken].filter(Boolean);
+  currentName = parts.join(' - ');
 
   nameEl.className = 'result-name';
   nameEl.textContent = currentName;
@@ -3353,6 +4456,7 @@ function saveName() {
     proj: cbProject.value,
     cont: cbContractor.value,
     doc: cbDoctype.value,
+    activity: cbActivity?.value || '',
     ts: now.toISOString(),
     date: now.toLocaleDateString('ar-SA'),
   };
@@ -3439,14 +4543,36 @@ function renderRecords() {
   const fp = document.getElementById('f-proj');
   const fc = document.getElementById('f-cont');
   const ft = document.getElementById('f-type');
+  const fcr = document.getElementById('f-creator');  // V2.5
 
   const curP = fp.value, curC = fc.value, curT = ft.value;
+  const curCr = fcr ? fcr.value : '';
   fp.innerHTML = '<option value="">الكل · All</option>' +
     state.projects.map(p => `<option value="${p.code}">${p.code} — ${p.name}</option>`).join('');
   fc.innerHTML = '<option value="">الكل · All</option>' +
     state.contractors.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
   ft.innerHTML = '<option value="">الكل · All</option>' +
     state.doctypes.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+
+  // V2.5 — Populate creator filter from unique createdBy entries in records
+  if (fcr) {
+    // Collect unique creators with display label + filter key (uid or name)
+    const creatorMap = new Map();
+    state.records.forEach(r => {
+      const cb = r.createdBy;
+      if (!cb) return;
+      const key = cb.uid || cb.name || '—';
+      const display = cb.displayName || (cb.nameEn ? `${cb.name} ${cb.nameEn}` : cb.name);
+      if (!creatorMap.has(key)) creatorMap.set(key, display);
+    });
+    const sortedCreators = Array.from(creatorMap.entries()).sort((a, b) => a[1].localeCompare(b[1], 'ar'));
+    fcr.innerHTML = '<option value="">الكل · All</option>' +
+      sortedCreators.map(([key, display]) =>
+        `<option value="${escapeHtml(key)}">${escapeHtml(display)}</option>`
+      ).join('');
+    fcr.value = curCr;
+  }
+
   fp.value = curP; fc.value = curC; ft.value = curT;
 
   // Stats
@@ -3459,6 +4585,15 @@ function renderRecords() {
   if (curP) recs = recs.filter(r => r.proj === curP);
   if (curC) recs = recs.filter(r => r.cont === curC);
   if (curT) recs = recs.filter(r => r.doc === curT);
+  // V2.5 — Apply creator filter (match by uid first, fall back to name)
+  if (curCr) {
+    recs = recs.filter(r => {
+      const cb = r.createdBy;
+      if (!cb) return false;
+      const key = cb.uid || cb.name || '—';
+      return String(key) === String(curCr);
+    });
+  }
 
   if (!recs.length) {
     wrap.innerHTML = `
@@ -3478,6 +4613,7 @@ function renderRecords() {
         <thead>
           <tr>
             <th>اسم الملف · Filename</th>
+            <th>أنشأ بواسطة · Created By</th>
             <th>النوع · Type</th>
             <th>المقاول · Contractor</th>
             <th>المشروع · Project</th>
@@ -3507,12 +4643,34 @@ function renderRecords() {
             const completedIcon = r.completedStages && Object.keys(r.completedStages).length > 0
               ? '<span title="مرحلة مُنجزة" style="color:var(--cyan);font-size:10px">✓</span>'
               : '';
+            // V2.3+V2.4 — Created By cell content: shows Arabic + English names side by side
+            const cb = r.createdBy;
+            let creatorCell;
+            if (cb && (cb.displayName || cb.name)) {
+              // Prefer the V2.4 displayName field; fall back to legacy 'name'
+              const nameAr = cb.name || '';
+              const nameEn = cb.nameEn || '';
+              const fullDisplay = cb.displayName || (nameEn ? `${nameAr} ${nameEn}` : nameAr);
+              const initial = (nameAr || fullDisplay).charAt(0).toUpperCase();
+              creatorCell = `
+                <div class="creator-cell" title="أنشئ بواسطة · Created by">
+                  <span class="creator-cell-avatar">${initial}</span>
+                  <div class="creator-cell-names">
+                    ${nameAr ? `<span class="creator-cell-name-ar">${escapeHtml(nameAr)}</span>` : ''}
+                    ${nameEn ? `<span class="creator-cell-name-en">${escapeHtml(nameEn)}</span>` : ''}
+                    ${!nameAr && !nameEn ? `<span class="creator-cell-name-ar">${escapeHtml(fullDisplay)}</span>` : ''}
+                  </div>
+                </div>`;
+            } else {
+              creatorCell = '<span style="color:var(--text-dim);font-size:11px">—</span>';
+            }
             return `
             <tr>
               <td>
                 <span class="doc-name">${escapeHtml(r.name)}</span>
                 ${finIcon} ${slaIcon} ${linkIcon} ${completedIcon}
               </td>
+              <td>${creatorCell}</td>
               <td><span class="type-badge">${escapeHtml(r.doc)}</span></td>
               <td>${escapeHtml(r.cont)}</td>
               <td><span class="code-chip">${escapeHtml(r.proj)}</span></td>
@@ -3562,6 +4720,15 @@ function openEditRecord(id) {
   docSel.innerHTML = state.doctypes.map(d =>
     `<option value="${escapeHtml(d)}" ${d === r.doc ? 'selected' : ''}>${escapeHtml(d)}</option>`
   ).join('');
+
+  // V2.1 — populate activity dropdown (merged: built-in + custom)
+  const actSel = document.getElementById('rm-activity');
+  if (actSel) {
+    actSel.innerHTML = '<option value="">— بدون · None —</option>' +
+      getAllActivities().map(a =>
+        `<option value="${escapeHtml(a.en)}" ${a.en === r.activity ? 'selected' : ''}>${escapeHtml(a.ar)} → ${escapeHtml(a.en)}</option>`
+      ).join('');
+  }
 
   document.getElementById('rm-name').value = r.name || '';
   document.getElementById('rm-sla-days').value = r.slaDays || 2;
@@ -3671,6 +4838,9 @@ function saveEditRecord() {
   r.proj = document.getElementById('rm-proj').value;
   r.cont = document.getElementById('rm-cont').value;
   r.doc = document.getElementById('rm-doc').value;
+  // V2.1 — save activity description
+  const actSelEdit = document.getElementById('rm-activity');
+  if (actSelEdit) r.activity = actSelEdit.value || '';
 
   // Handle link change
   const linkSel = document.getElementById('rm-link');
@@ -3764,6 +4934,8 @@ function clearFilters() {
   document.getElementById('f-proj').value = '';
   document.getElementById('f-cont').value = '';
   document.getElementById('f-type').value = '';
+  const fcr = document.getElementById('f-creator');
+  if (fcr) fcr.value = '';
   renderRecords();
 }
 
@@ -4184,6 +5356,26 @@ function renderSettings() {
     </span>
   `).join('') || '<span style="color:var(--text-dim);font-size:12px">لا يوجد</span>';
 
+  // V2.2 — Activities (built-in shown grayed-out, custom shown removable)
+  const actWrap = document.getElementById('set-activities');
+  if (actWrap) {
+    if (!state.customActivities) state.customActivities = [];
+    const builtInCount = ACTIVITIES.length;
+    const customCount = state.customActivities.length;
+    const builtInBadge = `<span style="display:inline-block;padding:3px 8px;background:rgba(148,163,184,.1);border:1px solid rgba(148,163,184,.2);border-radius:4px;font-size:10px;color:var(--text-muted);margin-bottom:8px;font-family:var(--font-mono)">📦 ${builtInCount} نشاط مدمج · Built-in</span>`;
+
+    const customTags = customCount > 0
+      ? state.customActivities.map((a, i) => `
+          <span class="tag" style="background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.25);color:var(--cyan)">
+            <span style="font-weight:600">${escapeHtml(a.ar)}</span>
+            <span style="opacity:.7;margin-inline-start:4px;font-family:var(--font-mono);font-size:10px">→ ${escapeHtml(a.en)}</span>
+            <button class="tag-del" onclick="removeActivity(${i})">×</button>
+          </span>`).join('')
+      : '<span style="color:var(--text-dim);font-size:12px">لا توجد أنشطة مخصصة بعد. كل الأنشطة المدمجة (91) متاحة بالفعل.</span>';
+
+    actWrap.innerHTML = builtInBadge + '<br>' + customTags;
+  }
+
   // SLA Rules
   renderSlaRules();
 }
@@ -4278,6 +5470,43 @@ function removeDoctype(idx) {
   renderSettings();
 }
 
+// V2.2 — Activities management (custom user activities, persist alongside built-in 91)
+function addActivity() {
+  const ar = document.getElementById('new-activity-ar').value.trim();
+  const en = document.getElementById('new-activity-en').value.trim();
+  if (!ar || !en) { toast('املأ الحقلين (عربي + إنجليزي)', 'error'); return; }
+  if (!state.customActivities) state.customActivities = [];
+  // Check duplicate by English value
+  if (state.customActivities.some(a => a.en === en) || ACTIVITIES.some(a => a.en === en)) {
+    toast('هذا النشاط موجود مسبقاً', 'error');
+    return;
+  }
+  state.customActivities.push({ en, ar });
+  saveState();
+  document.getElementById('new-activity-ar').value = '';
+  document.getElementById('new-activity-en').value = '';
+  renderSettings();
+  // Refresh the activity combobox if it's mounted
+  if (cbActivity && typeof cbActivity.render === 'function') cbActivity.render();
+  toast('✓ تمت الإضافة', 'success');
+}
+
+function removeActivity(idx) {
+  if (!confirm('حذف هذا النشاط؟')) return;
+  if (!state.customActivities) return;
+  state.customActivities.splice(idx, 1);
+  saveState();
+  renderSettings();
+  if (cbActivity && typeof cbActivity.render === 'function') cbActivity.render();
+  toast('تم الحذف', 'success');
+}
+
+// Helper to get the merged activity list (built-in + custom)
+function getAllActivities() {
+  const custom = state.customActivities || [];
+  return [...ACTIVITIES, ...custom];
+}
+
 function clearRecords() {
   if (!confirm('حذف جميع السجلات؟ لا يمكن التراجع.')) return;
   state.records = [];
@@ -4339,8 +5568,17 @@ function importData(e) {
 
 function exportCSV() {
   if (!state.records.length) { toast('لا توجد سجلات', 'error'); return; }
-  const headers = ['Name','Project','Contractor','Type','Date'];
-  const rows = state.records.map(r => [r.name, r.proj, r.cont, r.doc, r.date].map(v => {
+  const headers = ['Name','Project','Contractor','Type','Activity','CreatedBy','Status','Date'];
+  const rows = state.records.map(r => [
+    r.name,
+    r.proj,
+    r.cont,
+    r.doc,
+    r.activity || '',
+    r.createdBy?.name || '',
+    r.status || 'in_progress',
+    r.date
+  ].map(v => {
     const s = String(v || '');
     return /[,"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
   }));
@@ -4565,6 +5803,7 @@ saveName = function() {
     proj: cbProject.value,
     cont: cbContractor.value,
     doc: cbDoctype.value,
+    activity: cbActivity?.value || '',
     ts: now.toISOString(),
     date: now.toLocaleDateString('ar-SA'),
   };
@@ -5166,6 +6405,7 @@ saveName = function() {
     proj: cbProject.value,
     cont: cbContractor.value,
     doc: cbDoctype.value,
+    activity: cbActivity?.value || '',
     ts: now.toISOString(),
     date: now.toLocaleDateString('ar-SA'),
     slaDays: slaDays,
@@ -5702,6 +6942,1607 @@ function exportPerformanceCSV() {
 }
 
 
+/* ═════════════════════════════════════════════════════════════════
+   ███╗   ██╗ ██████╗ ██████╗ ███████╗  V2  ██████╗  ███████╗ ██████╗
+   ████╗  ██║██╔═══██╗██╔══██╗██╔════╝       ╚════██╗ ██╔════╝██╔════╝
+   ██╔██╗ ██║██║   ██║██║  ██║█████╗     ★    █████╔╝ ███████╗██║
+   ██║╚██╗██║██║   ██║██║  ██║██╔══╝         ██╔═══╝  ╚════██║██║
+   ██║ ╚████║╚██████╔╝██████╔╝███████╗ ★    ███████╗ ███████║╚██████╗
+   ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚══════╝       ╚══════╝ ╚══════╝ ╚═════╝
+   IPPF V2 — Roles · Audit · Attachments · Dashboard · Users · Clock
+   ═══════════════════════════════════════════════════════════════ */
+
+// ───────── V2 ROLE SYSTEM ─────────
+// V2 roles: 'admin' | 'coordinator' | 'observer'
+// Legacy V1: 'manager' → 'admin'; 'viewer' → 'observer'; 'coordinator' unchanged
+function v2NormalizeRole(r) {
+  if (!r) return 'observer';
+  const rr = String(r).toLowerCase();
+  if (rr === 'manager') return 'admin';
+  if (rr === 'viewer') return 'observer';
+  if (rr === 'admin' || rr === 'coordinator' || rr === 'observer') return rr;
+  return 'observer';
+}
+function currentRole() {
+  // Local mode: full admin (single-user environment)
+  if (appMode === 'local') return 'admin';
+  if (!currentUser) return 'observer';
+  return v2NormalizeRole(currentUser.role);
+}
+function isAdmin()       { return currentRole() === 'admin'; }
+function isCoordinator() { return currentRole() === 'coordinator'; }
+function isObserver()    { return currentRole() === 'observer'; }
+function canEdit()       { const r = currentRole(); return r === 'admin' || r === 'coordinator'; }
+function canManageUsers(){ return isAdmin(); }
+
+function roleLabel(role) {
+  const r = v2NormalizeRole(role);
+  return ({
+    admin:       'مسؤول · Admin',
+    coordinator: 'منسق · Coordinator',
+    observer:    'مراقب إداري · Observer'
+  })[r] || r;
+}
+
+// Apply role-based UI visibility (called whenever currentUser changes)
+function applyRoleVisibility() {
+  const role = currentRole();
+
+  // Admin-only nav items
+  document.getElementById('nav-users').style.display  = isAdmin() ? '' : 'none';
+  document.getElementById('nav-audit').style.display  = isAdmin() ? '' : 'none';
+
+  // Danger Zone — admin only
+  const dz = document.getElementById('settings-danger-block');
+  if (dz) dz.classList.toggle('hidden-by-role', !isAdmin());
+
+  // Update the user-dropdown role pill style + label
+  const ddRole = document.getElementById('user-dd-role');
+  if (ddRole && currentUser) {
+    ddRole.textContent = role.toUpperCase();
+    ddRole.style.background = role === 'admin' ? 'rgba(168,85,247,.15)'
+      : role === 'coordinator' ? 'rgba(99,102,241,.15)'
+      : 'rgba(148,163,184,.15)';
+    ddRole.style.color = role === 'admin' ? 'var(--purple)'
+      : role === 'coordinator' ? 'var(--accent)'
+      : 'var(--text-muted)';
+    ddRole.style.padding = '2px 8px';
+    ddRole.style.borderRadius = '4px';
+    ddRole.style.fontWeight = '700';
+    ddRole.style.fontSize = '10px';
+    ddRole.style.display = 'inline-block';
+    ddRole.style.marginTop = '4px';
+  }
+}
+
+// ───────── AUTH FLOW V2 — invite-code based ─────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.toggle('active', t.dataset.authTab === tab));
+  const isInvite = tab === 'invite';
+  document.getElementById('login-name-field').style.display    = isInvite ? 'block' : 'none';
+  const enField = document.getElementById('login-name-en-field');
+  if (enField) enField.style.display = isInvite ? 'block' : 'none';
+  document.getElementById('login-invite-field').style.display  = isInvite ? 'block' : 'none';
+  document.getElementById('login-submit-btn').textContent      = isInvite ? 'انضمام · Join' : 'دخول · Sign In';
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('login-success').style.display = 'none';
+}
+
+// V2 handleAuth — replaces V1 handleAuth entirely
+async function handleAuth() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const tabEl = document.querySelector('.login-tab.active');
+  const isInvite = tabEl && tabEl.dataset.authTab === 'invite';
+
+  if (!email || !password) { showLoginError('البريد وكلمة المرور مطلوبان'); return; }
+
+  const btn = document.getElementById('login-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'جاري المعالجة...';
+
+  try {
+    if (isInvite) {
+      // Invite-code joining flow
+      const name       = document.getElementById('login-name').value.trim();
+      const nameEn     = document.getElementById('login-name-en').value.trim();
+      const inviteCode = document.getElementById('login-invite').value.trim().toUpperCase();
+      if (!name)       { showLoginError('الاسم بالعربية مطلوب'); btn.disabled=false; btn.textContent='انضمام · Join'; return; }
+      if (!inviteCode) { showLoginError('رمز الدعوة مطلوب'); btn.disabled=false; btn.textContent='انضمام · Join'; return; }
+
+      // Bootstrap admin path: special code "BOOTSTRAP-ADMIN-FIRST" — only valid if no users exist
+      let assignedRole = null;
+      const isBootstrap = inviteCode === 'BOOTSTRAP-ADMIN-FIRST';
+
+      if (isBootstrap) {
+        const usersSnap = await firebaseDB.collection('users').limit(1).get();
+        if (!usersSnap.empty) throw new Error('رمز الـ Bootstrap لا يعمل: يوجد حسابات مسبقاً. اطلب رمز دعوة عادي من المسؤول.');
+        assignedRole = 'admin';
+      } else {
+        // Validate the invite code
+        const inviteDoc = await firebaseDB.collection('invite_codes').doc(inviteCode).get();
+        if (!inviteDoc.exists) throw new Error('رمز الدعوة غير صحيح');
+        const inv = inviteDoc.data();
+        if (inv.usedBy) throw new Error('رمز الدعوة مستخدم مسبقاً');
+        if (inv.expiresAt && inv.expiresAt.toDate() < new Date()) throw new Error('رمز الدعوة منتهي الصلاحية');
+        assignedRole = v2NormalizeRole(inv.role);
+      }
+
+      // Create the auth account
+      const cred = await firebaseAuth.createUserWithEmailAndPassword(email, password);
+      // Store both names in displayName (e.g. "حذيفة الطالب Huzaifa Altaleb")
+      const fullDisplayName = nameEn ? `${name} ${nameEn}` : name;
+      await cred.user.updateProfile({ displayName: fullDisplayName });
+
+      // Create user doc in Firestore
+      await firebaseDB.collection('users').doc(cred.user.uid).set({
+        email: email,
+        name: name,
+        nameEn: nameEn,                  // V2.4 — English name stored separately
+        role: assignedRole,
+        active: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        joinedViaCode: isBootstrap ? 'BOOTSTRAP' : inviteCode,
+      });
+
+      // Mark invite code as consumed (only for normal codes)
+      if (!isBootstrap) {
+        await firebaseDB.collection('invite_codes').doc(inviteCode).update({
+          usedBy: cred.user.uid,
+          usedByName: fullDisplayName,
+          usedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Audit
+      await writeAuditLog({
+        action: 'user',
+        recordId: cred.user.uid,
+        recordName: fullDisplayName + ' (' + email + ')',
+        reason: isBootstrap ? 'Bootstrap admin account created' : 'Joined via invite code',
+        newValue: assignedRole,
+        userOverride: { uid: cred.user.uid, name: name, role: assignedRole }
+      });
+
+      showLoginSuccess('✓ تم إنشاء الحساب · ' + roleLabel(assignedRole));
+      // onAuthStateChanged will handle redirect
+    } else {
+      // Standard sign-in
+      await firebaseAuth.signInWithEmailAndPassword(email, password);
+    }
+  } catch (err) {
+    let msg = err.message || 'خطأ غير معروف';
+    if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') msg = 'بريد أو كلمة مرور غير صحيحة';
+    else if (err.code === 'auth/email-already-in-use') msg = 'هذا البريد مستخدم مسبقاً';
+    else if (err.code === 'auth/weak-password') msg = 'كلمة المرور ضعيفة (6 أحرف على الأقل)';
+    else if (err.code === 'auth/invalid-email') msg = 'البريد الإلكتروني غير صحيح';
+    showLoginError(msg);
+    btn.disabled = false;
+    btn.textContent = isInvite ? 'انضمام · Join' : 'دخول · Sign In';
+  }
+}
+
+// ───────── HOT-SWAP MIGRATION (V1 → V2) ─────────
+// Runs once per session, transforms V1 data shape to V2.
+let _v2MigrationDone = false;
+function v2MigrateState() {
+  if (_v2MigrationDone) return;
+  let changed = 0;
+
+  // Migrate records: ensure status + createdBy fields exist
+  state.records.forEach(r => {
+    if (!r.status) {
+      // Infer status from existing data
+      if (r.finPaidDate || r.completedDate) r.status = 'completed';
+      else r.status = 'in_progress';
+      changed++;
+    }
+    if (!r.createdBy) {
+      r.createdBy = { uid: null, name: 'النظام (V1)', migrated: true };
+      changed++;
+    }
+    if (!r.attachments) r.attachments = [];
+  });
+
+  // Local audit log array (mirrors Firestore for fast viewing)
+  if (!state.auditLog) { state.auditLog = []; changed++; }
+
+  if (changed > 0) {
+    saveState();
+    console.log('[V2 Migration] Updated', changed, 'fields across records');
+  }
+  _v2MigrationDone = true;
+}
+
+// ───────── AUDIT LOG WRITER ─────────
+async function writeAuditLog(entry) {
+  // entry: { action, recordId, recordName, reason, oldValue, newValue, userOverride }
+  const user = entry.userOverride || (currentUser ? {
+    uid: currentUser.uid,
+    name: currentUser.displayName || currentUser.email || 'unknown',
+    role: currentRole()
+  } : { uid: null, name: 'محلي · Local', role: currentRole() });
+
+  const row = {
+    ts: new Date().toISOString(),
+    action: entry.action,
+    recordId: entry.recordId != null ? String(entry.recordId) : null,
+    recordName: entry.recordName || '',
+    userId: user.uid,
+    userName: user.name,
+    userRole: user.role,
+    reason: entry.reason || '',
+    oldValue: entry.oldValue != null ? String(entry.oldValue) : '',
+    newValue: entry.newValue != null ? String(entry.newValue) : '',
+  };
+
+  // Local cache (always)
+  if (!state.auditLog) state.auditLog = [];
+  state.auditLog.unshift(row);
+  // Keep last 500 locally to avoid bloating localStorage
+  if (state.auditLog.length > 500) state.auditLog = state.auditLog.slice(0, 500);
+  saveState();
+
+  // Cloud (if available)
+  if (appMode === 'cloud' && firebaseDB) {
+    try {
+      await firebaseDB.collection('audit_logs').add({
+        ...row,
+        ts: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (e) { console.warn('Audit log push failed:', e); }
+  }
+}
+
+// ───────── V2 saveName OVERRIDE — adds createdBy + status ─────────
+const _v2_origSaveName = window.saveName;
+window.saveName = async function() {
+  if (!canEdit()) {
+    toast('ليس لديك صلاحية الإنشاء (Observer)', 'error');
+    return;
+  }
+  // Snapshot record count before
+  const beforeCount = state.records.length;
+  // Call existing save
+  _v2_origSaveName.apply(this, arguments);
+  // If a new record was added, decorate it with V2 fields
+  if (state.records.length > beforeCount) {
+    const rec = state.records[0]; // unshift means the newest is at index 0
+    if (!rec.createdBy) {
+      // V2.4 — store BOTH Arabic + English names so the records page can display
+      // "حذيفة الطالب Huzaifa Altaleb" together, with a single distinctive color.
+      if (currentUser) {
+        const nameAr = currentUser.name || currentUser.displayName || currentUser.email || '';
+        const nameEn = currentUser.nameEn || '';
+        rec.createdBy = {
+          uid: currentUser.uid,
+          name: nameAr,
+          nameEn: nameEn,
+          // 'displayName' is what the UI renders — concatenated Arabic + English
+          displayName: nameEn ? `${nameAr} ${nameEn}` : nameAr,
+          role: currentRole()
+        };
+      } else {
+        // V2.5 — Local mode: read from state.localUser if user has set their profile
+        const lu = state.localUser || {};
+        const nameAr = lu.name || 'محلي';
+        const nameEn = lu.nameEn || '';
+        rec.createdBy = {
+          uid: null,
+          name: nameAr,
+          nameEn: nameEn,
+          displayName: nameEn ? `${nameAr} ${nameEn}` : nameAr,
+          role: 'admin'
+        };
+      }
+    }
+    if (!rec.status) rec.status = 'in_progress';
+    if (!rec.attachments) rec.attachments = [];
+    saveState();
+    // Audit
+    writeAuditLog({
+      action: 'create',
+      recordId: rec.id,
+      recordName: rec.name,
+      newValue: 'in_progress',
+      reason: 'إنشاء وثيقة جديدة'
+    });
+  }
+};
+
+// ───────── V2 saveEditRecord OVERRIDE — audit edits ─────────
+const _v2_origSaveEditRecord = window.saveEditRecord;
+if (typeof _v2_origSaveEditRecord === 'function') {
+  window.saveEditRecord = function() {
+    if (!canEdit()) { toast('ليس لديك صلاحية التعديل', 'error'); return; }
+    const editingId = window._editingRecordId; // we'll set this in openEditRecord override below
+    const before = editingId != null ? JSON.stringify(state.records.find(r => r.id === editingId) || {}) : '';
+    const result = _v2_origSaveEditRecord.apply(this, arguments);
+    const after  = editingId != null ? JSON.stringify(state.records.find(r => r.id === editingId) || {}) : '';
+    if (editingId != null && before !== after) {
+      const rec = state.records.find(r => r.id === editingId);
+      writeAuditLog({
+        action: 'edit',
+        recordId: editingId,
+        recordName: rec ? rec.name : String(editingId),
+        reason: 'تعديل بيانات الوثيقة',
+      });
+    }
+    return result;
+  };
+}
+
+// Track which record is being edited (for audit purposes)
+const _v2_origOpenEditRecord = window.openEditRecord;
+if (typeof _v2_origOpenEditRecord === 'function') {
+  window.openEditRecord = function(id) {
+    if (!canEdit()) { toast('ليس لديك صلاحية التعديل', 'error'); return; }
+    window._editingRecordId = id;
+    return _v2_origOpenEditRecord.apply(this, arguments);
+  };
+}
+
+// ───────── V2 deleteRecord OVERRIDE — audit deletes ─────────
+const _v2_origDeleteRecord = window.deleteRecord;
+window.deleteRecord = function(id) {
+  if (!isAdmin()) { toast('فقط Admin يستطيع الحذف', 'error'); return; }
+  const rec = state.records.find(r => r.id === id);
+  const name = rec ? rec.name : String(id);
+  // Confirm with reason
+  const reason = prompt('أدخل سبب الحذف (سيُسجَّل في سجل التدقيق):');
+  if (reason === null) return; // Cancelled
+  if (!reason.trim()) { alert('السبب مطلوب'); return; }
+  _v2_origDeleteRecord.apply(this, arguments);
+  // If actually deleted, log it
+  if (!state.records.find(r => r.id === id)) {
+    writeAuditLog({
+      action: 'delete',
+      recordId: id,
+      recordName: name,
+      reason: reason.trim(),
+      oldValue: 'existed',
+      newValue: 'deleted'
+    });
+  }
+};
+
+// ───────── V2 clearRecords / resetAll — Admin gating ─────────
+const _v2_origClearRecords = window.clearRecords;
+window.clearRecords = function() {
+  if (!isAdmin()) { toast('فقط Admin يستطيع تنفيذ هذه العملية', 'error'); return; }
+  const reason = prompt('سبب حذف جميع السجلات (إجباري):');
+  if (!reason || !reason.trim()) return;
+  const count = state.records.length;
+  _v2_origClearRecords.apply(this, arguments);
+  if (state.records.length === 0 && count > 0) {
+    writeAuditLog({
+      action: 'delete',
+      recordId: 'BULK',
+      recordName: `جميع السجلات (${count} وثيقة)`,
+      reason: reason.trim(),
+      oldValue: String(count),
+      newValue: '0'
+    });
+  }
+};
+const _v2_origResetAll = window.resetAll;
+window.resetAll = function() {
+  if (!isAdmin()) { toast('فقط Admin يستطيع تنفيذ هذه العملية', 'error'); return; }
+  return _v2_origResetAll.apply(this, arguments);
+};
+
+// ═════════════════════════════════════════════════════════════════
+// END V2 PART 1
+// ═════════════════════════════════════════════════════════════════
+
+
+// ═════════════════════════════════════════════════════════════════
+// V2 PART 2 — Status · Attachments · Clock · Dashboard · Users · Audit
+// ═════════════════════════════════════════════════════════════════
+
+// ───────── STATUS BADGE INJECTION INTO RECORDS TABLE ─────────
+// Wrap renderRecords to add the status column + createdBy chip
+const _v2_origRenderRecords = window.renderRecords;
+window.renderRecords = function() {
+  _v2_origRenderRecords.apply(this, arguments);
+
+  // Now post-process the table: add status & createdBy info to each row
+  const tbody = document.querySelector('#records-wrap tbody');
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll('tr');
+
+  // Re-derive the visible records list (must match V1 filter logic)
+  const fp = document.getElementById('f-proj');
+  const fc = document.getElementById('f-cont');
+  const ft = document.getElementById('f-type');
+  const fcr = document.getElementById('f-creator');
+  let recs = state.records;
+  if (fp.value) recs = recs.filter(r => r.proj === fp.value);
+  if (fc.value) recs = recs.filter(r => r.cont === fc.value);
+  if (ft.value) recs = recs.filter(r => r.doc === ft.value);
+  if (fcr && fcr.value) {
+    recs = recs.filter(r => {
+      const cb = r.createdBy;
+      if (!cb) return false;
+      const key = cb.uid || cb.name || '—';
+      return String(key) === String(fcr.value);
+    });
+  }
+
+  rows.forEach((tr, i) => {
+    const r = recs[i]; if (!r) return;
+    const status = r.status || 'in_progress';
+    const statusLabels = {
+      in_progress: 'تحت التنفيذ',
+      completed:   'تم الإنجاز',
+      cancelled:   'تم الإلغاء',
+    };
+    const cellName = tr.cells[0];
+    const cellActions = tr.cells[tr.cells.length - 1];
+
+    // Inject status badge into name cell
+    if (cellName && !cellName.querySelector('.status-badge')) {
+      const editable = canEdit();
+      const badge = `
+        <span class="status-badge ${status} ${editable ? '' : 'readonly'}"
+              ${editable ? `onclick="openStatusModal(${r.id})"` : ''}
+              title="${editable ? 'اضغط لتغيير الحالة' : 'اطلاع فقط'}">
+          <span class="status-dot"></span>${statusLabels[status]}
+        </span>`;
+      cellName.insertAdjacentHTML('beforeend', ' ' + badge);
+
+      // V2.1 — Activity description chip (if present)
+      if (r.activity) {
+        const safeAct = String(r.activity).replace(/[<>]/g,'');
+        const actChip = `<span class="activity-chip" title="وصف النشاط">⚙ ${safeAct}</span>`;
+        cellName.insertAdjacentHTML('beforeend', ' ' + actChip);
+      }
+      // Note: Created By is now rendered as a dedicated column (V2.3) — no chip needed here
+    }
+
+    // Inject attachments + audit icons into actions cell
+    if (cellActions) {
+      const attachCount = (r.attachments || []).length;
+      const attachBtn = `<button class="btn btn-ghost btn-sm btn-icon" title="المرفقات (${attachCount})" onclick="openAttachModal(${r.id})">📎${attachCount > 0 ? '<sup style=\"color:var(--accent);font-size:9px\">'+attachCount+'</sup>' : ''}</button>`;
+      const histBtn   = `<button class="btn btn-ghost btn-sm btn-icon" title="السجل" onclick="openRecordAudit(${r.id})">⏱</button>`;
+      // Insert before existing buttons
+      cellActions.insertAdjacentHTML('afterbegin', attachBtn + histBtn);
+
+      // Disable edit/delete for observers
+      if (!canEdit()) {
+        cellActions.querySelectorAll('button[title="تعديل"], button[title="حذف"]').forEach(b => {
+          b.classList.add('observer-disabled');
+        });
+      }
+      if (!isAdmin()) {
+        cellActions.querySelectorAll('button[title="حذف"]').forEach(b => {
+          b.classList.add('observer-disabled');
+        });
+      }
+    }
+  });
+};
+
+// ───────── STATUS CHANGE MODAL ─────────
+let _statusModalRecordId = null;
+let _statusModalSelected = null;
+
+function openStatusModal(id) {
+  if (!canEdit()) { toast('ليس لديك صلاحية تغيير الحالة', 'error'); return; }
+  const r = state.records.find(x => x.id === id);
+  if (!r) return;
+  _statusModalRecordId = id;
+  _statusModalSelected = r.status || 'in_progress';
+  document.getElementById('status-modal-record-name').textContent = r.name;
+  document.getElementById('status-reason').value = '';
+  // Mark currently-selected status
+  document.querySelectorAll('#status-modal .status-pick').forEach(p => {
+    p.classList.toggle('selected', p.dataset.status === _statusModalSelected);
+    if (p.dataset.status === _statusModalSelected) p.classList.add(_statusModalSelected);
+  });
+  document.getElementById('status-modal').classList.add('open');
+}
+function closeStatusModal() {
+  document.getElementById('status-modal').classList.remove('open');
+  _statusModalRecordId = null;
+  _statusModalSelected = null;
+}
+function pickStatus(s) {
+  _statusModalSelected = s;
+  document.querySelectorAll('#status-modal .status-pick').forEach(p => {
+    p.classList.remove('selected', 'in_progress', 'completed', 'cancelled');
+    if (p.dataset.status === s) {
+      p.classList.add('selected', s);
+    }
+  });
+}
+async function saveStatusChange() {
+  const reason = document.getElementById('status-reason').value.trim();
+  if (!_statusModalSelected) { alert('اختر الحالة'); return; }
+  if (!reason) { alert('سبب التغيير مطلوب — أدخل وصفاً واضحاً'); return; }
+  const r = state.records.find(x => x.id === _statusModalRecordId);
+  if (!r) { closeStatusModal(); return; }
+  const oldStatus = r.status || 'in_progress';
+  if (oldStatus === _statusModalSelected) {
+    closeStatusModal();
+    toast('لا تغيير في الحالة', 'info');
+    return;
+  }
+
+  // Apply
+  r.status = _statusModalSelected;
+  r.statusChangedAt = new Date().toISOString();
+  r.statusChangedBy = currentUser
+    ? { uid: currentUser.uid, name: currentUser.displayName || currentUser.email }
+    : { uid: null, name: 'محلي · Local' };
+  saveState();
+  if (typeof updateAlertBadge === 'function') updateAlertBadge();
+
+  await writeAuditLog({
+    action: 'status_change',
+    recordId: r.id,
+    recordName: r.name,
+    oldValue: oldStatus,
+    newValue: _statusModalSelected,
+    reason: reason
+  });
+
+  closeStatusModal();
+  renderRecords();
+  toast('✓ تم تغيير الحالة', 'success');
+}
+
+// Click outside to close
+document.getElementById('status-modal').addEventListener('click', (e) => {
+  if (e.target.classList.contains('modal')) closeStatusModal();
+});
+
+// ───────── ATTACHMENTS (Firebase Storage) ─────────
+let _attachModalRecordId = null;
+
+function openAttachModal(id) {
+  const r = state.records.find(x => x.id === id);
+  if (!r) return;
+  _attachModalRecordId = id;
+  document.getElementById('attach-modal-record-name').textContent = r.name;
+  renderAttachList(id);
+  // Hide uploader for observers
+  document.getElementById('attach-uploader-zone').style.display = canEdit() ? '' : 'none';
+  document.getElementById('attach-modal').classList.add('open');
+}
+function closeAttachModal() {
+  document.getElementById('attach-modal').classList.remove('open');
+  _attachModalRecordId = null;
+}
+function renderAttachList(recordId) {
+  const r = state.records.find(x => x.id === recordId);
+  const list = r?.attachments || [];
+  const wrap = document.getElementById('attach-list-display');
+  if (list.length === 0) {
+    wrap.innerHTML = '<div style="text-align:center;padding:18px;color:var(--text-muted);font-size:11px">لا توجد مرفقات</div>';
+    return;
+  }
+  wrap.innerHTML = list.map((att, idx) => {
+    const ext = (att.name || '').split('.').pop().toLowerCase();
+    const icon = ({pdf:'📕',doc:'📘',docx:'📘',xls:'📊',xlsx:'📊',png:'🖼',jpg:'🖼',jpeg:'🖼',zip:'🗜',rar:'🗜'})[ext] || '📄';
+    const sizeKB = att.size ? Math.round(att.size / 1024) + ' KB' : '';
+    const uploaderName = att.uploadedByName || '—';
+    const dateStr = att.uploadedAt ? new Date(att.uploadedAt).toLocaleDateString('ar-SA') : '';
+    const canDelete = isAdmin() || (canEdit() && currentUser && att.uploadedBy === currentUser.uid);
+    return `
+      <div class="attach-item">
+        <div class="attach-item-icon">${icon}</div>
+        <div class="attach-item-info">
+          <div class="attach-item-name">${escapeHtml(att.name)}</div>
+          <div class="attach-item-meta">${sizeKB} · ${escapeHtml(uploaderName)} · ${dateStr}</div>
+        </div>
+        <div class="attach-item-actions">
+          ${att.url ? `<button class="attach-icon-btn" title="معاينة" onclick="window.open('${att.url}','_blank')">👁</button>` : ''}
+          ${att.url ? `<button class="attach-icon-btn" title="تنزيل" onclick="downloadAttachment('${att.url}','${escapeHtml(att.name).replace(/'/g,"\\'")}')">⬇</button>` : ''}
+          ${canDelete ? `<button class="attach-icon-btn danger" title="حذف" onclick="deleteAttachment(${recordId}, ${idx})">×</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function downloadAttachment(url, name) {
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.target = '_blank';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+async function uploadAttachments(files) {
+  if (!canEdit()) { toast('ليس لديك صلاحية الرفع', 'error'); return; }
+  if (_attachModalRecordId == null) return;
+  const r = state.records.find(x => x.id === _attachModalRecordId);
+  if (!r) return;
+  if (!r.attachments) r.attachments = [];
+
+  // Local mode: store as data URLs (with size limit warning)
+  const useCloud = (appMode === 'cloud' && firebaseApp && firebase.storage);
+
+  for (const file of files) {
+    if (file.size > 10 * 1024 * 1024) {
+      toast(`الملف "${file.name}" أكبر من 10 MB — تم تخطيه`, 'error');
+      continue;
+    }
+    try {
+      let attachData;
+      if (useCloud) {
+        const storage = firebase.storage();
+        const safeName = file.name.replace(/[^\w.\-]/g, '_');
+        const path = `attachments/${r.id}/${Date.now()}_${safeName}`;
+        const ref = storage.ref(path);
+        const snapshot = await ref.put(file);
+        const url = await snapshot.ref.getDownloadURL();
+        attachData = {
+          name: file.name,
+          size: file.size,
+          contentType: file.type,
+          storagePath: path,
+          url: url,
+          uploadedBy: currentUser?.uid || null,
+          uploadedByName: currentUser?.displayName || currentUser?.email || 'محلي',
+          uploadedAt: new Date().toISOString()
+        };
+      } else {
+        // Local fallback: data URL (warn for big files)
+        if (file.size > 1024 * 1024) {
+          if (!confirm(`في الوضع المحلي، الملفات تُخزَّن داخل المتصفح. الملف "${file.name}" بحجم ${Math.round(file.size/1024)} KB. متابعة؟`)) continue;
+        }
+        const dataUrl = await new Promise((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result);
+          reader.onerror = rej;
+          reader.readAsDataURL(file);
+        });
+        attachData = {
+          name: file.name,
+          size: file.size,
+          contentType: file.type,
+          storagePath: null,
+          url: dataUrl,
+          uploadedBy: null,
+          uploadedByName: 'محلي · Local',
+          uploadedAt: new Date().toISOString()
+        };
+      }
+      r.attachments.push(attachData);
+      saveState();
+      await writeAuditLog({
+        action: 'attach',
+        recordId: r.id,
+        recordName: r.name,
+        newValue: file.name,
+        reason: 'رفع مرفق'
+      });
+      renderAttachList(r.id);
+      // Re-render records to update count badge
+      if (document.getElementById('page-records').classList.contains('active')) renderRecords();
+      toast(`✓ تم رفع: ${file.name}`, 'success');
+    } catch (e) {
+      console.error('Upload error:', e);
+      toast(`فشل رفع ${file.name}: ${e.message}`, 'error');
+    }
+  }
+}
+
+async function deleteAttachment(recordId, idx) {
+  const r = state.records.find(x => x.id === recordId);
+  if (!r || !r.attachments || !r.attachments[idx]) return;
+  const att = r.attachments[idx];
+  if (!confirm(`حذف المرفق "${att.name}"؟`)) return;
+
+  // Try to delete from Storage if exists
+  if (att.storagePath && appMode === 'cloud' && firebase.storage) {
+    try {
+      await firebase.storage().ref(att.storagePath).delete();
+    } catch (e) { console.warn('Storage delete failed:', e); }
+  }
+  r.attachments.splice(idx, 1);
+  saveState();
+  await writeAuditLog({
+    action: 'attach',
+    recordId: r.id,
+    recordName: r.name,
+    oldValue: att.name,
+    newValue: 'deleted',
+    reason: 'حذف مرفق'
+  });
+  renderAttachList(r.id);
+  if (document.getElementById('page-records').classList.contains('active')) renderRecords();
+  toast('تم الحذف', 'success');
+}
+
+// Wire up file input (script runs at end of body — DOM is already ready)
+(function wireAttachUploader() {
+  const fi = document.getElementById('attach-file-input');
+  if (fi) {
+    fi.addEventListener('change', (e) => {
+      if (e.target.files.length) uploadAttachments(Array.from(e.target.files));
+      e.target.value = '';
+    });
+  }
+  // Drag-drop on uploader zone
+  const zone = document.getElementById('attach-uploader-zone');
+  if (zone) {
+    ['dragenter','dragover'].forEach(evt => zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.add('dragover'); }));
+    ['dragleave','drop'].forEach(evt => zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.remove('dragover'); }));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files.length) uploadAttachments(Array.from(e.dataTransfer.files));
+    });
+  }
+})();
+
+document.getElementById('attach-modal').addEventListener('click', (e) => {
+  if (e.target.classList.contains('modal')) closeAttachModal();
+});
+
+// ───────── SAUDI CLOCK WIDGET ─────────
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const s = now.getSeconds();
+
+  // Format time
+  const pad = (n) => String(n).padStart(2, '0');
+  const t = pad(h) + ':' + pad(m) + ':' + pad(s);
+  const tEl = document.getElementById('clock-time');
+  if (tEl) tEl.textContent = t;
+
+  // Gregorian date (Arabic)
+  const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const dayName = days[now.getDay()];
+  const greg = `${dayName} ${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+  const gEl = document.getElementById('clock-greg');
+  if (gEl) gEl.textContent = greg;
+
+  // Hijri date (using Intl)
+  try {
+    const hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    }).format(now);
+    const hEl = document.getElementById('clock-hijri');
+    if (hEl) hEl.textContent = '☪ ' + hijri;
+  } catch(e) { /* old browser fallback */ }
+
+  // Animate arcs
+  // Hour arc: r=17, circumference = 2π × 17 ≈ 106.81
+  // Minute arc: r=13, circumference ≈ 81.68
+  // Second arc: r=9, circumference ≈ 56.55
+  const hC = 2 * Math.PI * 17;
+  const mC = 2 * Math.PI * 13;
+  const sC = 2 * Math.PI * 9;
+  const hourFrac = ((h % 12) + m / 60) / 12;
+  const minFrac  = (m + s / 60) / 60;
+  const secFrac  = s / 60;
+
+  const arcH = document.querySelector('.clock-svg .arc-h');
+  const arcM = document.querySelector('.clock-svg .arc-m');
+  const arcS = document.querySelector('.clock-svg .arc-s');
+  if (arcH) { arcH.setAttribute('stroke-dasharray', hC); arcH.setAttribute('stroke-dashoffset', hC * (1 - hourFrac)); }
+  if (arcM) { arcM.setAttribute('stroke-dasharray', mC); arcM.setAttribute('stroke-dashoffset', mC * (1 - minFrac)); }
+  if (arcS) { arcS.setAttribute('stroke-dasharray', sC); arcS.setAttribute('stroke-dashoffset', sC * (1 - secFrac)); }
+}
+setInterval(updateClock, 1000);
+setTimeout(updateClock, 200);
+
+// ───────── DASHBOARD ─────────
+function renderDashboard() {
+  const recs = state.records;
+  const total = recs.length;
+  const inProg = recs.filter(r => (r.status || 'in_progress') === 'in_progress').length;
+  const done   = recs.filter(r => r.status === 'completed').length;
+  const cancel = recs.filter(r => r.status === 'cancelled').length;
+
+  // Detect overdue (in-progress with passed SLA dueDate)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const overdue = recs.filter(r => {
+    if ((r.status || 'in_progress') !== 'in_progress') return false;
+    if (!r.slaDueDate) return false;
+    const due = new Date(r.slaDueDate); due.setHours(0,0,0,0);
+    return today > due;
+  }).length;
+
+  const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  // KPI Tiles
+  const kpis = [
+    { label: 'إجمالي الوثائق · Total Docs', value: total, sub: `${state.projects.length} مشاريع`, color: '' },
+    { label: 'تحت التنفيذ · In Progress',    value: inProg, sub: `${overdue} متأخرة`, color: overdue > 0 ? 'amber' : 'cyan' },
+    { label: 'مكتملة · Completed',           value: done,   sub: `${completionRate}% نسبة الإنجاز`, color: 'green' },
+    { label: 'ملغاة · Cancelled',             value: cancel, sub: '—', color: 'red' },
+    { label: 'المستخدمون · Members',         value: window._v2UsersCache?.length || 1, sub: '—', color: 'purple' },
+  ];
+  document.getElementById('dash-kpis').innerHTML = kpis.map(k => `
+    <div class="dash-kpi ${k.color}">
+      <div class="dash-kpi-label">${k.label}</div>
+      <div class="dash-kpi-value">${k.value}</div>
+      <div class="dash-kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  // Donut chart — status distribution
+  const donutData = [
+    { label: 'تحت التنفيذ', value: inProg, color: 'var(--accent)' },
+    { label: 'مكتملة',      value: done,   color: 'var(--green)' },
+    { label: 'ملغاة',        value: cancel, color: 'var(--red)' },
+  ];
+  const donutTotal = donutData.reduce((s, d) => s + d.value, 0) || 1;
+  const r = 50, c = 2 * Math.PI * r;
+  let offset = 0;
+  const segs = donutData.map((d, i) => {
+    const len = (d.value / donutTotal) * c;
+    const seg = `<circle class="donut-segment" cx="70" cy="70" r="${r}"
+                  stroke="${d.color}" stroke-width="14"
+                  stroke-dasharray="${len} ${c - len}"
+                  stroke-dashoffset="${-offset}"
+                  transform="rotate(-90 70 70)"/>`;
+    offset += len;
+    return seg;
+  }).join('');
+
+  document.getElementById('dash-donut').innerHTML = `
+    <div class="donut-wrap">
+      <svg class="donut-svg" viewBox="0 0 140 140">
+        <circle class="donut-bg" cx="70" cy="70" r="${r}" stroke-width="14"/>
+        ${segs}
+        <text x="70" y="64" class="donut-center" font-size="22">${total}</text>
+        <text x="70" y="84" class="donut-center" font-size="9" fill="var(--text-muted)">DOCS</text>
+      </svg>
+      <div class="donut-legend">
+        ${donutData.map(d => `
+          <div class="donut-legend-item">
+            <span class="donut-dot" style="background:${d.color}"></span>
+            <span class="donut-label">${d.label}</span>
+            <span class="donut-count">${d.value} (${donutTotal > 0 ? Math.round(d.value / donutTotal * 100) : 0}%)</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  // Stage performance bars
+  const stages = ['عرض سعر','طلب شراء','أمر شراء','عقد','مستخلص (فاتورة)'];
+  const stageEn = ['Quote','PR','PO','Contract','Invoice'];
+  const maxStage = Math.max(1, ...stages.map(s => recs.filter(r => r.doc === s).length));
+  document.getElementById('dash-stage-bars').innerHTML = `
+    <div class="bar-chart">
+      ${stages.map((s, i) => {
+        const count = recs.filter(r => r.doc === s).length;
+        const w = (count / maxStage) * 100;
+        return `
+          <div class="bar-row">
+            <div class="bar-label">${stageEn[i]}</div>
+            <div class="bar-track"><div class="bar-fill accent" style="width:${w}%"></div></div>
+            <div class="bar-value">${count}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
+
+  // Member activity — group records by createdBy
+  const memberMap = new Map();
+  recs.forEach(rec => {
+    const name = rec.createdBy?.name || 'النظام';
+    const uid = rec.createdBy?.uid || 'system';
+    const key = uid + '||' + name;
+    if (!memberMap.has(key)) memberMap.set(key, { name, uid, count: 0, completed: 0 });
+    const m = memberMap.get(key);
+    m.count++;
+    if (rec.status === 'completed') m.completed++;
+  });
+  const members = Array.from(memberMap.values()).sort((a, b) => b.count - a.count).slice(0, 8);
+  document.getElementById('dash-members').innerHTML = members.length === 0
+    ? '<div style="text-align:center;padding:18px;color:var(--text-muted);font-size:11px">لا توجد بيانات</div>'
+    : members.map(m => `
+        <div class="member-perf-row">
+          <div class="member-perf-avatar">${m.name.charAt(0).toUpperCase()}</div>
+          <div class="member-perf-info">
+            <div class="member-perf-name">${escapeHtml(m.name)}</div>
+            <div class="member-perf-meta">${m.completed} مكتملة من ${m.count}</div>
+          </div>
+          <div class="member-perf-count">${m.count}</div>
+        </div>`).join('');
+
+  // By project bars
+  const projMap = new Map();
+  recs.forEach(rec => {
+    if (!projMap.has(rec.proj)) projMap.set(rec.proj, 0);
+    projMap.set(rec.proj, projMap.get(rec.proj) + 1);
+  });
+  const projArr = Array.from(projMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const maxProj = Math.max(1, ...projArr.map(p => p[1]));
+  document.getElementById('dash-by-project').innerHTML = projArr.length === 0
+    ? '<div style="text-align:center;padding:18px;color:var(--text-muted);font-size:11px">لا توجد بيانات</div>'
+    : `<div class="bar-chart">
+      ${projArr.map(([code, count]) => {
+        const proj = state.projects.find(p => p.code === code);
+        const label = proj ? proj.code : code;
+        const w = (count / maxProj) * 100;
+        return `
+          <div class="bar-row">
+            <div class="bar-label" title="${proj ? escapeHtml(proj.name) : ''}">${escapeHtml(label)}</div>
+            <div class="bar-track"><div class="bar-fill green" style="width:${w}%"></div></div>
+            <div class="bar-value">${count}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ───────── USERS MANAGEMENT ─────────
+window._v2UsersCache = [];
+
+async function loadUsers() {
+  if (appMode !== 'cloud' || !firebaseDB) {
+    window._v2UsersCache = [{
+      uid: 'local', email: '—', name: 'محلي · Local Mode', role: 'admin', active: true,
+      createdAt: null
+    }];
+    return window._v2UsersCache;
+  }
+  try {
+    const snap = await firebaseDB.collection('users').get();
+    window._v2UsersCache = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    return window._v2UsersCache;
+  } catch (e) {
+    console.warn('loadUsers failed:', e);
+    return [];
+  }
+}
+
+async function renderUsersPage() {
+  if (!isAdmin()) {
+    document.getElementById('users-tbl-wrap').innerHTML = '<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">هذه الصفحة للمسؤولين فقط</div></div>';
+    return;
+  }
+  await loadUsers();
+  const users = window._v2UsersCache;
+  const wrap = document.getElementById('users-tbl-wrap');
+  if (users.length === 0) {
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚇</div><div class="empty-text">لا يوجد مستخدمون</div></div>';
+  } else {
+    wrap.innerHTML = `
+      <table class="users-tbl">
+        <thead>
+          <tr>
+            <th>المستخدم · User</th>
+            <th>الصلاحية · Role</th>
+            <th>الحالة · Status</th>
+            <th>تاريخ الانضمام · Joined</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${users.map(u => {
+            const role = v2NormalizeRole(u.role);
+            const initial = (u.name || u.email || '?').charAt(0).toUpperCase();
+            const dateStr = u.createdAt && u.createdAt.toDate
+              ? u.createdAt.toDate().toLocaleDateString('ar-SA')
+              : (u.createdAt ? new Date(u.createdAt).toLocaleDateString('ar-SA') : '—');
+            const isMe = currentUser && u.uid === currentUser.uid;
+            return `
+              <tr>
+                <td>
+                  <div class="user-cell-name">
+                    <div class="user-cell-avatar">${initial}</div>
+                    <div class="user-cell-info">
+                      <div class="user-cell-fullname">${escapeHtml(u.name || '—')}${isMe ? ' <span style="color:var(--text-muted);font-weight:400;font-size:10px">(أنت)</span>' : ''}</div>
+                      <div class="user-cell-email">${escapeHtml(u.email || '—')}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <select onchange="changeUserRole('${u.uid}', this.value)" ${isMe ? 'disabled title="لا يمكنك تغيير دورك"' : ''}
+                    style="background:var(--bg-input);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:5px;font-size:11px">
+                    <option value="admin"       ${role==='admin'?'selected':''}>Admin</option>
+                    <option value="coordinator" ${role==='coordinator'?'selected':''}>Coordinator</option>
+                    <option value="observer"    ${role==='observer'?'selected':''}>Observer</option>
+                  </select>
+                </td>
+                <td>
+                  <span class="user-status-pill ${u.active === false ? 'inactive' : ''}">${u.active === false ? 'معطّل' : 'نشط'}</span>
+                </td>
+                <td style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">${dateStr}</td>
+                <td style="white-space:nowrap">
+                  ${!isMe ? `<button class="btn btn-ghost btn-sm" onclick="toggleUserActive('${u.uid}', ${u.active === false})">${u.active === false ? 'تفعيل' : 'تعطيل'}</button>` : ''}
+                </td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // Active invite codes
+  await renderActiveInvites();
+}
+
+async function renderActiveInvites() {
+  const wrap = document.getElementById('active-invites');
+  if (appMode !== 'cloud' || !firebaseDB) {
+    wrap.innerHTML = '<div style="font-size:11px;color:var(--text-muted);text-align:center;padding:12px">رموز الدعوة تتطلب وضع Cloud</div>';
+    return;
+  }
+  try {
+    const snap = await firebaseDB.collection('invite_codes').where('usedBy', '==', null).get();
+    const invs = snap.docs.map(d => ({ code: d.id, ...d.data() })).filter(i => {
+      if (!i.expiresAt) return true;
+      return i.expiresAt.toDate() > new Date();
+    });
+    if (invs.length === 0) {
+      wrap.innerHTML = '<div style="font-size:11px;color:var(--text-muted);text-align:center;padding:12px">لا توجد رموز نشطة</div>';
+      return;
+    }
+    wrap.innerHTML = invs.map(i => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-input);border-radius:8px;margin-bottom:6px">
+        <code style="flex:1;font-family:var(--font-mono);color:var(--accent);font-weight:600;letter-spacing:0.05em">${i.code}</code>
+        <span class="role-badge ${v2NormalizeRole(i.role)}">${v2NormalizeRole(i.role)}</span>
+        <span style="font-size:10px;color:var(--text-muted)">${i.expiresAt ? 'ينتهي ' + i.expiresAt.toDate().toLocaleDateString('ar-SA') : ''}</span>
+        <button class="btn btn-ghost btn-sm btn-icon" title="نسخ" onclick="navigator.clipboard.writeText('${i.code}').then(()=>toast('نُسخ','success'))">⎘</button>
+        <button class="btn btn-danger btn-sm btn-icon" title="إلغاء" onclick="revokeInvite('${i.code}')">×</button>
+      </div>`).join('');
+  } catch (e) {
+    wrap.innerHTML = '<div style="font-size:11px;color:var(--red);text-align:center;padding:12px">فشل تحميل الرموز: ' + e.message + '</div>';
+  }
+}
+
+async function changeUserRole(uid, newRole) {
+  if (!isAdmin()) return;
+  const u = window._v2UsersCache.find(x => x.uid === uid);
+  if (!u) return;
+  const oldRole = v2NormalizeRole(u.role);
+  if (oldRole === newRole) return;
+  if (!confirm(`تغيير صلاحية ${u.name} من ${oldRole} إلى ${newRole}؟`)) {
+    renderUsersPage(); return;
+  }
+  try {
+    await firebaseDB.collection('users').doc(uid).update({ role: newRole });
+    u.role = newRole;
+    await writeAuditLog({
+      action: 'user',
+      recordId: uid,
+      recordName: u.name + ' (' + u.email + ')',
+      oldValue: oldRole,
+      newValue: newRole,
+      reason: 'تغيير الصلاحية'
+    });
+    toast('✓ تم تحديث الصلاحية', 'success');
+  } catch (e) { toast('خطأ: ' + e.message, 'error'); }
+}
+
+async function toggleUserActive(uid, makeActive) {
+  if (!isAdmin()) return;
+  const u = window._v2UsersCache.find(x => x.uid === uid);
+  if (!u) return;
+  if (!confirm(`${makeActive ? 'تفعيل' : 'تعطيل'} حساب ${u.name}؟`)) return;
+  try {
+    await firebaseDB.collection('users').doc(uid).update({ active: makeActive });
+    u.active = makeActive;
+    await writeAuditLog({
+      action: 'user',
+      recordId: uid,
+      recordName: u.name,
+      oldValue: makeActive ? 'inactive' : 'active',
+      newValue: makeActive ? 'active' : 'inactive',
+      reason: makeActive ? 'تفعيل الحساب' : 'تعطيل الحساب'
+    });
+    renderUsersPage();
+    toast('✓ تم التحديث', 'success');
+  } catch (e) { toast('خطأ: ' + e.message, 'error'); }
+}
+
+// ───────── INVITE CODES ─────────
+function makeInviteCode() {
+  const seg = () => Math.random().toString(16).substring(2, 6).toUpperCase();
+  return 'IPPF-' + seg() + '-' + seg();
+}
+
+async function generateInviteCode() {
+  if (!isAdmin()) { toast('فقط Admin', 'error'); return; }
+  if (appMode !== 'cloud' || !firebaseDB) { toast('يتطلب وضع Cloud', 'error'); return; }
+  document.getElementById('invite-modal').classList.add('open');
+  document.getElementById('invite-code-display').textContent = '— جاري التوليد —';
+  document.getElementById('invite-role-select').value = 'coordinator';
+
+  // Generate on role change
+  const roleSel = document.getElementById('invite-role-select');
+  const doGen = async () => {
+    const code = makeInviteCode();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    try {
+      await firebaseDB.collection('invite_codes').doc(code).set({
+        role: roleSel.value,
+        createdBy: currentUser.uid,
+        createdByName: currentUser.displayName || currentUser.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt),
+        usedBy: null,
+        usedAt: null,
+      });
+      document.getElementById('invite-code-display').textContent = code;
+      window._currentInviteCode = code;
+      await writeAuditLog({
+        action: 'user',
+        recordId: code,
+        recordName: 'Invite Code',
+        newValue: roleSel.value,
+        reason: 'توليد رمز دعوة'
+      });
+    } catch (e) {
+      document.getElementById('invite-code-display').textContent = 'خطأ';
+      toast('خطأ: ' + e.message, 'error');
+    }
+  };
+  await doGen();
+  roleSel.onchange = doGen;
+}
+function closeInviteModal() {
+  document.getElementById('invite-modal').classList.remove('open');
+  window._currentInviteCode = null;
+  if (document.getElementById('page-users').classList.contains('active')) renderActiveInvites();
+}
+function copyInviteCode() {
+  const code = window._currentInviteCode || document.getElementById('invite-code-display').textContent;
+  navigator.clipboard.writeText(code).then(() => toast('✓ تم النسخ', 'success'));
+}
+async function revokeInvite(code) {
+  if (!confirm('إلغاء هذا الرمز؟')) return;
+  try {
+    await firebaseDB.collection('invite_codes').doc(code).delete();
+    await writeAuditLog({
+      action: 'user',
+      recordId: code,
+      recordName: 'Invite Code',
+      reason: 'إلغاء رمز دعوة'
+    });
+    renderActiveInvites();
+    toast('تم الإلغاء', 'success');
+  } catch (e) { toast('خطأ: ' + e.message, 'error'); }
+}
+document.getElementById('invite-modal').addEventListener('click', (e) => {
+  if (e.target.classList.contains('modal')) closeInviteModal();
+});
+
+// ───────── CREATE USER MODAL (admin manually adds member) ─────────
+function openCreateUserModal() {
+  if (!isAdmin()) { toast('فقط Admin', 'error'); return; }
+  if (appMode !== 'cloud' || !firebaseDB) { toast('يتطلب وضع Cloud', 'error'); return; }
+  document.getElementById('cu-name').value = '';
+  document.getElementById('cu-name-en').value = '';
+  document.getElementById('cu-email').value = '';
+  document.getElementById('cu-password').value = '';
+  document.getElementById('cu-role').value = 'coordinator';
+  document.getElementById('cu-error').style.display = 'none';
+  document.getElementById('create-user-modal').classList.add('open');
+}
+function closeCreateUserModal() {
+  document.getElementById('create-user-modal').classList.remove('open');
+}
+async function saveNewUser() {
+  const name   = document.getElementById('cu-name').value.trim();
+  const nameEn = document.getElementById('cu-name-en').value.trim();
+  const email  = document.getElementById('cu-email').value.trim();
+  const pw     = document.getElementById('cu-password').value;
+  const role   = document.getElementById('cu-role').value;
+  const errEl  = document.getElementById('cu-error');
+  errEl.style.display = 'none';
+
+  if (!name || !email || !pw) { errEl.textContent = 'جميع الحقول المطلوبة (*)'; errEl.style.display = 'block'; return; }
+  if (pw.length < 6) { errEl.textContent = 'كلمة المرور 6 أحرف على الأقل'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('cu-save-btn');
+  btn.disabled = true; btn.textContent = 'جاري الإنشاء...';
+
+  const fullDisplayName = nameEn ? `${name} ${nameEn}` : name;
+
+  try {
+    // Note: createUserWithEmailAndPassword auto-signs in the new user, kicking the admin out.
+    // Workaround: use a secondary Firebase app instance just for user creation.
+    const secondaryName = 'admin-create-user-' + Date.now();
+    const secondaryApp = firebase.initializeApp(firebaseApp.options, secondaryName);
+    const secondaryAuth = secondaryApp.auth();
+    const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pw);
+    await cred.user.updateProfile({ displayName: fullDisplayName });
+
+    await firebaseDB.collection('users').doc(cred.user.uid).set({
+      email: email, name: name, nameEn: nameEn, role: role, active: true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdByAdmin: currentUser.uid,
+    });
+
+    await secondaryAuth.signOut();
+    await secondaryApp.delete();
+
+    await writeAuditLog({
+      action: 'user',
+      recordId: cred.user.uid,
+      recordName: fullDisplayName + ' (' + email + ')',
+      newValue: role,
+      reason: 'إضافة عضو جديد بواسطة المسؤول'
+    });
+
+    closeCreateUserModal();
+    if (document.getElementById('page-users').classList.contains('active')) renderUsersPage();
+    toast('✓ تم إنشاء الحساب', 'success');
+  } catch (e) {
+    let msg = e.message;
+    if (e.code === 'auth/email-already-in-use') msg = 'هذا البريد مستخدم';
+    if (e.code === 'auth/weak-password') msg = 'كلمة المرور ضعيفة';
+    errEl.textContent = msg; errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'إنشاء الحساب · Create Account';
+  }
+}
+document.getElementById('create-user-modal').addEventListener('click', (e) => {
+  if (e.target.classList.contains('modal')) closeCreateUserModal();
+});
+
+// ───────── AUDIT LOG VIEWER ─────────
+async function loadAuditLogFromCloud() {
+  if (appMode !== 'cloud' || !firebaseDB) return state.auditLog || [];
+  try {
+    const snap = await firebaseDB.collection('audit_logs').orderBy('ts', 'desc').limit(200).get();
+    return snap.docs.map(d => {
+      const x = d.data();
+      return {
+        ...x,
+        ts: x.ts && x.ts.toDate ? x.ts.toDate().toISOString() : x.ts
+      };
+    });
+  } catch (e) {
+    console.warn('Audit cloud fetch failed:', e);
+    return state.auditLog || [];
+  }
+}
+
+async function renderAuditLog() {
+  if (!isAdmin()) {
+    document.getElementById('audit-list').innerHTML = '<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">للمسؤولين فقط</div></div>';
+    return;
+  }
+  const entries = await loadAuditLogFromCloud();
+
+  // Populate user filter
+  const users = Array.from(new Set(entries.map(e => e.userName))).filter(Boolean).sort();
+  const userSel = document.getElementById('audit-filter-user');
+  const curUser = userSel.value;
+  userSel.innerHTML = '<option value="">كل المستخدمين · All users</option>' +
+    users.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+  userSel.value = curUser;
+
+  // Apply filters
+  const fAct  = document.getElementById('audit-filter-action').value;
+  const fUsr  = document.getElementById('audit-filter-user').value;
+  const fSrch = document.getElementById('audit-filter-search').value.trim().toLowerCase();
+  let filtered = entries;
+  if (fAct) filtered = filtered.filter(e => e.action === fAct);
+  if (fUsr) filtered = filtered.filter(e => e.userName === fUsr);
+  if (fSrch) filtered = filtered.filter(e =>
+    (e.recordName || '').toLowerCase().includes(fSrch) ||
+    (e.reason || '').toLowerCase().includes(fSrch));
+
+  const list = document.getElementById('audit-list');
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">⏱</div><div class="empty-text">لا توجد سجلات</div></div>';
+    return;
+  }
+
+  const actionMap = {
+    create:        { icon: '✦', label: 'إنشاء',         cls: 'create' },
+    status_change: { icon: '⚙', label: 'تغيير حالة',    cls: 'status' },
+    edit:          { icon: '✎', label: 'تعديل',          cls: 'edit'   },
+    delete:        { icon: '×', label: 'حذف',            cls: 'delete' },
+    attach:        { icon: '📎', label: 'مرفق',          cls: 'attach' },
+    user:          { icon: '👤', label: 'مستخدم/صلاحية', cls: 'user'   },
+  };
+
+  list.innerHTML = filtered.map(e => {
+    const meta = actionMap[e.action] || { icon: '?', label: e.action, cls: '' };
+    const tsStr = e.ts ? new Date(e.ts).toLocaleString('ar-SA') : '—';
+    const valueChange = (e.oldValue || e.newValue)
+      ? `<div style="font-size:10px;font-family:var(--font-mono);color:var(--text-muted);margin-top:4px">
+          ${e.oldValue ? `<span style="text-decoration:line-through">${escapeHtml(e.oldValue)}</span>` : ''}
+          ${e.oldValue && e.newValue ? '→' : ''}
+          ${e.newValue ? `<span style="color:var(--accent)">${escapeHtml(e.newValue)}</span>` : ''}
+        </div>` : '';
+    return `
+      <div class="audit-entry">
+        <div class="audit-icon ${meta.cls}">${meta.icon}</div>
+        <div class="audit-body">
+          <div class="audit-action">${meta.label}</div>
+          <div class="audit-target">${escapeHtml(e.recordName || e.recordId || '')}</div>
+          ${valueChange}
+          ${e.reason ? `<div class="audit-reason">📝 ${escapeHtml(e.reason)}</div>` : ''}
+          <div class="audit-meta">
+            <span class="audit-user-chip">👤 ${escapeHtml(e.userName || 'unknown')}</span>
+            <span>· ${tsStr}</span>
+            ${e.userRole ? `<span class="role-badge ${v2NormalizeRole(e.userRole)}" style="font-size:9px">${v2NormalizeRole(e.userRole)}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Filter listeners (attach directly — script runs at end of body so DOM is ready)
+['audit-filter-action','audit-filter-user','audit-filter-search'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('change', renderAuditLog);
+    if (id === 'audit-filter-search') {
+      el.addEventListener('input', () => {
+        clearTimeout(window._auditSearchTimer);
+        window._auditSearchTimer = setTimeout(renderAuditLog, 300);
+      });
+    }
+  }
+});
+
+// Per-record audit view (filter by record)
+function openRecordAudit(recordId) {
+  switchTab('audit');
+  setTimeout(() => {
+    document.getElementById('audit-filter-search').value = String(recordId);
+    renderAuditLog();
+  }, 100);
+}
+
+// ───────── PAGE ROUTING — extend switchTab for V2 pages ─────────
+const _v2_origSwitchTab = window.switchTab;
+window.switchTab = function(tab) {
+  // Block non-admins from admin pages
+  if ((tab === 'users' || tab === 'audit' || tab === 'dashboard') && !isAdmin() && tab !== 'dashboard') {
+    toast('للمسؤولين فقط', 'error');
+    return;
+  }
+
+  // Hide all pages first, then activate target
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const page = document.getElementById('page-' + tab);
+  if (page) page.classList.add('active');
+  const btn = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+  if (btn) btn.classList.add('active');
+  // Mobile nav
+  document.querySelectorAll('.mob-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+
+  // Render the appropriate page
+  if (tab === 'records' && typeof renderRecords === 'function') renderRecords();
+  else if (tab === 'projects' && typeof renderProjects === 'function') renderProjects();
+  else if (tab === 'performance' && typeof renderPerformance === 'function') renderPerformance();
+  else if (tab === 'settings' && typeof renderSettings === 'function') renderSettings();
+  else if (tab === 'dashboard') renderDashboard();
+  else if (tab === 'users') renderUsersPage();
+  else if (tab === 'audit') renderAuditLog();
+};
+// Re-bind clicks to new switchTab
+document.querySelectorAll('.nav-item, .mob-btn').forEach(btn => {
+  btn.onclick = () => switchTab(btn.dataset.tab);
+});
+
+// ───────── BOOTSTRAP — apply gating after initial auth ─────────
+const _v2_origUpdateUserPill = window.updateUserPill;
+window.updateUserPill = function() {
+  _v2_origUpdateUserPill.apply(this, arguments);
+  applyRoleVisibility();
+};
+
+// On showMainApp, run V2 migration + apply visibility
+const _v2_origShowMainApp = window.showMainApp;
+window.showMainApp = function() {
+  _v2_origShowMainApp.apply(this, arguments);
+  v2MigrateState();
+  applyRoleVisibility();
+  // Pre-load users for member-count KPI
+  if (isAdmin()) loadUsers();
+};
+
+// Override the built-in onAuthStateChanged hook: ensure role is normalized after fetch
+// We do this by wrapping the userDoc handling. The simplest path is to re-apply visibility
+// whenever currentUser changes. We can hook a periodic check, but a better approach:
+// just expose a helper that's called from the main flow.
+window.v2RefreshAuthState = async function() {
+  if (currentUser && firebaseDB && currentUser.uid) {
+    try {
+      const ud = await firebaseDB.collection('users').doc(currentUser.uid).get();
+      if (ud.exists) {
+        const d = ud.data();
+        currentUser.role = v2NormalizeRole(d.role);
+        currentUser.name = d.name || currentUser.name || currentUser.displayName;
+        currentUser.nameEn = d.nameEn || '';                                  // V2.4
+        // Build full display name: "Arabic English" if both, else just one
+        currentUser.displayName = currentUser.nameEn
+          ? `${currentUser.name} ${currentUser.nameEn}`
+          : currentUser.name;
+        currentUser.active = d.active !== false;
+
+        // If deactivated, sign out
+        if (currentUser.active === false) {
+          alert('تم تعطيل حسابك. تواصل مع المسؤول.');
+          signOut();
+          return;
+        }
+      }
+    } catch (e) { console.warn('v2RefreshAuthState:', e); }
+  }
+  applyRoleVisibility();
+  updateUserPill();
+};
+
+// Run a refresh shortly after app init
+setTimeout(() => {
+  if (currentUser) v2RefreshAuthState();
+  applyRoleVisibility();
+}, 800);
+
+// ───────── BOOTSTRAP ADMIN HINT (for first-time setup) ─────────
+// If Firebase is configured but no users exist, show a hint about the BOOTSTRAP code
+async function checkBootstrapHint() {
+  if (appMode === 'local') return;
+  if (!firebaseDB) return;
+  try {
+    const snap = await firebaseDB.collection('users').limit(1).get();
+    if (snap.empty) {
+      // No users → show bootstrap hint on the login screen
+      const authMode = document.getElementById('login-auth-mode');
+      if (!authMode || authMode.style.display === 'none') return;
+      // Only inject once
+      if (document.getElementById('bootstrap-hint')) return;
+      const hint = document.createElement('div');
+      hint.id = 'bootstrap-hint';
+      hint.style.cssText = 'margin-top:14px;padding:14px;background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(168,85,247,.05));border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;line-height:1.7;color:var(--text)';
+      hint.innerHTML = `
+        <strong style="color:#F59E0B;font-size:12px">🚀 إعداد أول مسؤول · Bootstrap Admin</strong><br>
+        لم يتم إنشاء أي حساب بعد. لإنشاء أول مسؤول:
+        <ol style="margin:8px 0 0 18px;padding:0;color:var(--text-muted)">
+          <li>اضغط على "انضمام بدعوة"</li>
+          <li>استخدم رمز الدعوة: <code style="background:rgba(0,0,0,.2);padding:2px 6px;border-radius:4px;color:#F59E0B;font-family:var(--font-mono)">BOOTSTRAP-ADMIN-FIRST</code></li>
+          <li>أكمل البيانات وانضم — ستحصل على صلاحية Admin تلقائياً</li>
+        </ol>`;
+      authMode.appendChild(hint);
+    }
+  } catch (e) { /* ignore */ }
+}
+
+// Periodically check while on login screen
+setTimeout(checkBootstrapHint, 1500);
+
+// ═════════════════════════════════════════════════════════════════
+// V2.4 — MY PROFILE (each user can edit their own Arabic + English name)
+// ═════════════════════════════════════════════════════════════════
+function openProfileModal() {
+  const modal = document.getElementById('profile-modal');
+  if (!modal) return;
+  document.getElementById('pf-error').style.display = 'none';
+  document.getElementById('pf-apply-old').checked = false;
+
+  const isLocal = (appMode === 'local');
+  // Toggle local-mode hint
+  document.getElementById('pf-local-hint').style.display = isLocal ? '' : 'none';
+  // Hide email + role fields when in local mode (no auth)
+  document.getElementById('pf-cloud-fields').style.display = isLocal ? 'none' : '';
+  document.getElementById('pf-cloud-role-field').style.display = isLocal ? 'none' : '';
+
+  if (isLocal) {
+    // Read from state.localUser (persisted on this device)
+    const lu = state.localUser || { name: '', nameEn: '' };
+    document.getElementById('pf-name').value    = lu.name || '';
+    document.getElementById('pf-name-en').value = lu.nameEn || '';
+  } else {
+    if (!currentUser) { toast('سجّل دخول أولاً', 'error'); return; }
+    document.getElementById('pf-name').value    = currentUser.name || currentUser.displayName || '';
+    document.getElementById('pf-name-en').value = currentUser.nameEn || '';
+    document.getElementById('pf-email').value   = currentUser.email || '';
+    document.getElementById('pf-role').value    = currentRole();
+  }
+
+  modal.classList.add('open');
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-modal').classList.remove('open');
+}
+
+// V2.5 — Retroactively apply a name to legacy/local records
+function applyNameToLegacyRecords(name, nameEn) {
+  let updated = 0;
+  const fullDisplayName = nameEn ? `${name} ${nameEn}` : name;
+  state.records.forEach(r => {
+    const cb = r.createdBy;
+    // Apply to: missing createdBy, migrated V1 records, or local-mode records (uid === null)
+    const isLegacy = !cb
+      || cb.migrated === true
+      || cb.uid == null
+      || (cb.name && (cb.name === 'محلي' || cb.name === 'محلي · Local' || cb.name === 'النظام (V1)' || cb.name === 'النظام'));
+    if (isLegacy) {
+      r.createdBy = {
+        uid: null,
+        name: name,
+        nameEn: nameEn,
+        displayName: fullDisplayName,
+        role: 'admin',
+        retroAssigned: true
+      };
+      updated++;
+    }
+  });
+  if (updated > 0) saveState();
+  return updated;
+}
+
+async function saveProfile() {
+  const name   = document.getElementById('pf-name').value.trim();
+  const nameEn = document.getElementById('pf-name-en').value.trim();
+  const applyOld = document.getElementById('pf-apply-old').checked;
+  const errEl  = document.getElementById('pf-error');
+  errEl.style.display = 'none';
+
+  if (!name) { errEl.textContent = 'الاسم بالعربية مطلوب'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('pf-save-btn');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ...';
+
+  const fullDisplayName = nameEn ? `${name} ${nameEn}` : name;
+  const isLocal = (appMode === 'local');
+
+  try {
+    if (isLocal) {
+      // V2.5 — Save to state.localUser (persists in localStorage via saveState)
+      state.localUser = { name, nameEn };
+      saveState();
+      // Apply to old records if requested
+      let updated = 0;
+      if (applyOld) updated = applyNameToLegacyRecords(name, nameEn);
+      // Refresh views
+      if (document.getElementById('page-records')?.classList.contains('active')) renderRecords();
+      if (typeof updateUserPill === 'function') updateUserPill();
+      closeProfileModal();
+      toast(`✓ تم حفظ الملف الشخصي${updated > 0 ? ` · حُدِّث ${updated} سجل قديم` : ''}`, 'success');
+      return;
+    }
+
+    // Cloud mode: persist to Firestore
+    if (!firebaseDB || !currentUser) { errEl.textContent = 'لا يوجد اتصال بـ Firebase'; errEl.style.display = 'block'; btn.disabled=false; btn.textContent='حفظ · Save'; return; }
+
+    await firebaseDB.collection('users').doc(currentUser.uid).update({
+      name: name,
+      nameEn: nameEn,
+    });
+    if (firebaseAuth.currentUser) {
+      await firebaseAuth.currentUser.updateProfile({ displayName: fullDisplayName });
+    }
+    currentUser.name = name;
+    currentUser.nameEn = nameEn;
+    currentUser.displayName = fullDisplayName;
+
+    let updated = 0;
+    if (applyOld) updated = applyNameToLegacyRecords(name, nameEn);
+
+    await writeAuditLog({
+      action: 'user',
+      recordId: currentUser.uid,
+      recordName: fullDisplayName,
+      reason: 'تحديث الملف الشخصي' + (updated > 0 ? ` (طبّق على ${updated} سجل قديم)` : ''),
+      newValue: nameEn ? `${name} | ${nameEn}` : name,
+    });
+
+    closeProfileModal();
+    if (typeof updateUserPill === 'function') updateUserPill();
+    if (document.getElementById('page-records')?.classList.contains('active')) renderRecords();
+    toast(`✓ تم حفظ الملف الشخصي${updated > 0 ? ` · حُدِّث ${updated} سجل قديم` : ''}`, 'success');
+  } catch (e) {
+    errEl.textContent = 'خطأ: ' + (e.message || e);
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'حفظ · Save';
+  }
+}
+
+document.getElementById('profile-modal').addEventListener('click', (e) => {
+  if (e.target.classList.contains('modal')) closeProfileModal();
+});
+
+// ═════════════════════════════════════════════════════════════════
+// END V2 PART 2 — IPPF V2 BUILD COMPLETE
+// ═════════════════════════════════════════════════════════════════
 
 </script>
 </body>
